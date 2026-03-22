@@ -1,0 +1,12 @@
+export const extensionId = "mmiyaji.vscode-memobox";
+export const configurationSection = "memobox";
+export const defaultMetaDir = ".vscode-memobox";
+export const defaultDatePathFormat = "yyyy/MM";
+export const defaultListSortOrder = "filename";
+export const defaultListDisplayExtname = ["md"] as const;
+export const defaultGrepViewMode = "quickPick";
+export const defaultTodoPattern = "^.*@todo.*?:";
+export const defaultQuickMemoTitlePrefix = "## ";
+export const defaultQuickMemoDateFormat = "yyyy-MM-dd HH:mm";
+export const defaultSearchMaxResults = 200;
+export const defaultRelatedMemoLimit = 12;

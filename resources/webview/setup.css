@@ -1,0 +1,123 @@
+      :root {
+        color-scheme: light dark;
+        --page-bg: var(--vscode-editor-background);
+        --panel-bg: var(--vscode-editorWidget-background);
+        --surface-bg: var(--vscode-sideBar-background);
+        --panel-border: var(--vscode-panel-border);
+        --muted: var(--vscode-descriptionForeground);
+        --focus-border: var(--vscode-focusBorder);
+        --button-bg: var(--vscode-button-background);
+        --button-fg: var(--vscode-button-foreground);
+        --button-hover-bg: var(--vscode-button-hoverBackground);
+        font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--page-bg);
+        color: var(--vscode-foreground);
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px 16px;
+      }
+      .panel, .info-card {
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        background: var(--panel-bg);
+      }
+      .panel {
+        padding: 20px;
+      }
+      .eyebrow, .label {
+        display: inline-block;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      h1 {
+        margin: 8px 0 6px;
+        font-size: 26px;
+        line-height: 1.25;
+        font-weight: 600;
+      }
+      h2 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.35;
+      }
+      p {
+        margin: 0;
+        line-height: 1.55;
+      }
+      .muted { color: var(--muted); }
+      .hero-copy { margin-top: 10px; }
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+        margin-top: 16px;
+      }
+      .stack {
+        display: grid;
+        gap: 12px;
+      }
+      .info-card {
+        padding: 14px;
+      }
+      .value {
+        display: block;
+        margin-top: 8px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      button {
+        min-height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        background: var(--surface-bg);
+        color: inherit;
+        cursor: pointer;
+        transition: border-color 120ms ease, background 120ms ease;
+      }
+      button:hover { border-color: var(--focus-border); }
+      .primary {
+        background: var(--button-bg);
+        color: var(--button-fg);
+        border-color: transparent;
+      }
+      .primary:hover { background: var(--button-hover-bg); }
+      .steps {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .step-pill {
+        padding: 4px 8px;
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .step-pill-active {
+        color: inherit;
+        border-color: var(--focus-border);
+      }
+      code {
+        font-family: var(--vscode-editor-font-family, "Cascadia Code", monospace);
+        font-size: 12px;
+      }
+      @media (max-width: 860px) {
+        .grid { grid-template-columns: 1fr; }
+      }

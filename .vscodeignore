@@ -1,0 +1,9 @@
+.github/**
+.gitignore
+docs/**
+eslint.config.js
+eslint.config.mjs
+scripts/**
+test/**
+tsconfig*.json
+README_ja.md

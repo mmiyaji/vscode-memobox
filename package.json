@@ -1,0 +1,387 @@
+{
+  "name": "vscode-memobox",
+  "displayName": "MemoBox",
+  "description": "A maintainable daily memo workflow extension for VS Code.",
+  "version": "0.1.0",
+  "publisher": "mmiyaji",
+  "icon": "media/icon.png",
+  "license": "MIT",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mmiyaji/vscode-memobox.git"
+  },
+  "homepage": "https://github.com/mmiyaji/vscode-memobox",
+  "bugs": {
+    "url": "https://github.com/mmiyaji/vscode-memobox/issues"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "memo",
+    "notes",
+    "markdown",
+    "journal",
+    "productivity"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:memobox.openAdmin",
+    "onCommand:memobox.newMemo",
+    "onCommand:memobox.quickMemo",
+    "onCommand:memobox.listMemos",
+    "onCommand:memobox.listTags",
+    "onCommand:memobox.createWorkspace",
+    "onCommand:memobox.grepMemos",
+    "onCommand:memobox.todoMemos",
+    "onCommand:memobox.relatedMemos",
+    "onCommand:memobox.redateMemo",
+    "onCommand:memobox.refreshIndex",
+    "onCommand:memobox.openMemoFolder",
+    "onCommand:memobox.openMarkdownInBrowser",
+    "onCommand:memobox.openSetup",
+    "onCommand:memobox.openSettings"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configurationDefaults": {
+      "[markdown]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        }
+      },
+      "markdown.copyFiles.destination": {
+        "*": "assets/${isoTime/^(\\d+)-(\\d+)-(\\d+)T(\\d+):(\\d+):(\\d+).+/$1$2$3-$4$5$6/}.${fileExtName}"
+      }
+    },
+    "commands": [
+      {
+        "command": "memobox.newMemo",
+        "title": "%commands.newMemo.title%"
+      },
+      {
+        "command": "memobox.quickMemo",
+        "title": "%commands.quickMemo.title%"
+      },
+      {
+        "command": "memobox.listMemos",
+        "title": "%commands.listMemos.title%"
+      },
+      {
+        "command": "memobox.listTags",
+        "title": "%commands.listTags.title%"
+      },
+      {
+        "command": "memobox.createWorkspace",
+        "title": "%commands.createWorkspace.title%"
+      },
+      {
+        "command": "memobox.grepMemos",
+        "title": "%commands.grepMemos.title%"
+      },
+      {
+        "command": "memobox.todoMemos",
+        "title": "%commands.todoMemos.title%"
+      },
+      {
+        "command": "memobox.relatedMemos",
+        "title": "%commands.relatedMemos.title%"
+      },
+      {
+        "command": "memobox.redateMemo",
+        "title": "%commands.redateMemo.title%"
+      },
+      {
+        "command": "memobox.refreshIndex",
+        "title": "%commands.refreshIndex.title%"
+      },
+      {
+        "command": "memobox.openMemoFolder",
+        "title": "%commands.openMemoFolder.title%"
+      },
+      {
+        "command": "memobox.openMarkdownInBrowser",
+        "title": "%commands.openMarkdownInBrowser.title%"
+      },
+      {
+        "command": "memobox.openSettings",
+        "title": "%commands.openSettings.title%"
+      },
+      {
+        "command": "memobox.openSetup",
+        "title": "%commands.openSetup.title%"
+      },
+      {
+        "command": "memobox.openAdmin",
+        "title": "%commands.openAdmin.title%"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "memobox.newMemo",
+        "key": "ctrl+alt+n",
+        "when": "editorTextFocus || !editorFocus"
+      },
+      {
+        "command": "memobox.quickMemo",
+        "key": "ctrl+alt+t",
+        "when": "editorTextFocus || !editorFocus"
+      },
+      {
+        "command": "memobox.grepMemos",
+        "key": "ctrl+alt+g",
+        "when": "editorTextFocus || !editorFocus"
+      },
+      {
+        "command": "memobox.openAdmin",
+        "key": "ctrl+alt+shift+m",
+        "when": "editorTextFocus || !editorFocus"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "memobox.submenu",
+        "label": "MemoBox"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "memobox.submenu",
+          "group": "memobox@1",
+          "when": "editorLangId == markdown"
+        }
+      ],
+      "memobox.submenu": [
+        {
+          "command": "memobox.newMemo",
+          "group": "1_basic@1"
+        },
+        {
+          "command": "memobox.listMemos",
+          "group": "1_basic@2"
+        },
+        {
+          "command": "memobox.quickMemo",
+          "group": "1_basic@3"
+        },
+        {
+          "command": "memobox.listTags",
+          "group": "1_basic@4"
+        },
+        {
+          "command": "memobox.grepMemos",
+          "group": "1_basic@5"
+        },
+        {
+          "command": "memobox.todoMemos",
+          "group": "1_basic@6"
+        },
+        {
+          "command": "memobox.relatedMemos",
+          "group": "1_basic@7"
+        },
+        {
+          "command": "memobox.redateMemo",
+          "group": "2_manage@1"
+        },
+        {
+          "command": "memobox.createWorkspace",
+          "group": "2_manage@2"
+        },
+        {
+          "command": "memobox.openMarkdownInBrowser",
+          "group": "2_manage@3"
+        },
+        {
+          "command": "memobox.refreshIndex",
+          "group": "2_manage@4"
+        },
+        {
+          "command": "memobox.openAdmin",
+          "group": "2_manage@5"
+        },
+        {
+          "command": "memobox.openSettings",
+          "group": "2_manage@6"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "%config.title%",
+      "properties": {
+        "memobox.memodir": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%settings.memodir.description%"
+        },
+        "memobox.datePathFormat": {
+          "type": "string",
+          "default": "yyyy/MM",
+          "markdownDescription": "%settings.datePathFormat.description%"
+        },
+        "memobox.memotemplate": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%settings.memotemplate.description%"
+        },
+        "memobox.metaDir": {
+          "type": "string",
+          "default": ".vscode-memobox",
+          "markdownDescription": "%settings.metaDir.description%"
+        },
+        "memobox.templatesDir": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%settings.templatesDir.description%"
+        },
+        "memobox.snippetsDir": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%settings.snippetsDir.description%"
+        },
+        "memobox.searchMaxResults": {
+          "type": "number",
+          "default": 200,
+          "minimum": 1,
+          "markdownDescription": "%settings.searchMaxResults.description%"
+        },
+        "memobox.relatedMemoLimit": {
+          "type": "number",
+          "default": 12,
+          "minimum": 1,
+          "markdownDescription": "%settings.relatedMemoLimit.description%"
+        },
+        "memobox.titlePrefix": {
+          "type": "string",
+          "default": "## ",
+          "markdownDescription": "%settings.titlePrefix.description%"
+        },
+        "memobox.dateFormat": {
+          "type": "string",
+          "default": "yyyy-MM-dd HH:mm",
+          "markdownDescription": "%settings.dateFormat.description%"
+        },
+        "memobox.memoNewFilenameFromClipboard": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%settings.memoNewFilenameFromClipboard.description%"
+        },
+        "memobox.memoNewFilenameFromSelection": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%settings.memoNewFilenameFromSelection.description%"
+        },
+        "memobox.memoNewFilenameDateSuffix": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%settings.memoNewFilenameDateSuffix.description%"
+        },
+        "memobox.listSortOrder": {
+          "type": "string",
+          "enum": [
+            "filename",
+            "mtime",
+            "birthtime"
+          ],
+          "default": "filename",
+          "markdownDescription": "%settings.listSortOrder.description%"
+        },
+        "memobox.listDisplayExtname": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "md"
+          ],
+          "markdownDescription": "%settings.listDisplayExtname.description%"
+        },
+        "memobox.displayFileBirthTime": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%settings.displayFileBirthTime.description%"
+        },
+        "memobox.openMarkdownPreview": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%settings.openMarkdownPreview.description%"
+        },
+        "memobox.grepViewMode": {
+          "type": "string",
+          "enum": [
+            "quickPick",
+            "outputChannel",
+            "both",
+            "readOnlyDocument",
+            "editableDocument"
+          ],
+          "default": "quickPick",
+          "markdownDescription": "%settings.grepViewMode.description%"
+        },
+        "memobox.todoPattern": {
+          "type": "string",
+          "default": "^.*@todo.*?:",
+          "markdownDescription": "%settings.todoPattern.description%"
+        },
+        "memobox.recentCount": {
+          "type": "number",
+          "default": 8,
+          "minimum": 1,
+          "markdownDescription": "%settings.recentCount.description%"
+        },
+        "memobox.adminOpenOnStartup": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%settings.adminOpenOnStartup.description%"
+        },
+        "memobox.locale": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "ja",
+            "en"
+          ],
+          "default": "auto",
+          "markdownDescription": "%settings.locale.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "watch": "node ./scripts/build.mjs --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "test": "node ./scripts/run-tests.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:headed": "npm run build && playwright test --headed",
+    "validate": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "package:vsix": "npm run build && npx @vscode/vsce package --out memobox-0.1.0.vsix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "@playwright/test": "^1.58.2",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^8.7.0",
+    "@typescript-eslint/parser": "^8.7.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.11.1",
+    "playwright": "^1.58.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "markdown-it": "^14.1.1"
+  }
+}

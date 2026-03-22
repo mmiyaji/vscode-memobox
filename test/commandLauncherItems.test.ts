@@ -1,0 +1,20 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { getMemoCommandLauncherDescriptors } from "../src/features/commands/commandLauncherItems";
+
+test("command launcher descriptors are grouped and unique", () => {
+  const descriptors = getMemoCommandLauncherDescriptors();
+
+  assert.ok(descriptors.length > 0);
+
+  const commands = descriptors.map((item) => item.command);
+  assert.equal(new Set(commands).size, commands.length);
+  assert.equal(descriptors[0]?.group, "Capture");
+  assert.equal(descriptors.at(-1)?.command, "memobox.openSettings");
+
+  for (const descriptor of descriptors) {
+    assert.notEqual(descriptor.label.trim(), "");
+    assert.notEqual(descriptor.detail.trim(), "");
+    assert.notEqual(descriptor.icon.trim(), "");
+  }
+});

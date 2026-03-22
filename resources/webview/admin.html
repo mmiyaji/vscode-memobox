@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-{{NONCE}}';" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{PAGE_TITLE}}</title>
+    <style>
+{{CSS}}
+    </style>
+  </head>
+  <body>
+    <main data-testid="admin-root">
+{{WARNING_BANNER}}
+      <section class="overview" data-testid="admin-hero">
+        <div class="overview-head">
+          <div>
+            <span class="eyebrow">MemoBox v{{VERSION}}</span>
+            <h1 data-testid="admin-title">{{OVERVIEW_TITLE}}</h1>
+            <p class="overview-copy">
+              {{OVERVIEW_COPY}}
+            </p>
+            <p class="overview-meta">
+              {{LAST_REFRESHED_LABEL}}: {{GENERATED_AT}}<br />
+              {{DATA_SOURCE_LABEL}}: {{INDEX_SOURCE}}<br />
+              {{SCOPE_LABEL}}: {{MEMO_SCOPE}}
+            </p>
+          </div>
+          <div class="summary-grid" data-testid="admin-stats">
+{{SUMMARY_CARDS}}
+          </div>
+        </div>
+
+        <div class="toolbar">
+{{ACTION_BUTTONS}}
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="stack">
+          <article class="panel" data-testid="recent-files-panel">
+            <div class="panel-head">
+              <h2>{{RECENT_MEMOS_TITLE}}</h2>
+              <p class="panel-subtitle">{{RECENT_MEMOS_SUBTITLE}}</p>
+              <p class="panel-meta">{{RECENT_MEMOS_META}}</p>
+            </div>
+            <ul class="recent-list">{{RECENT_MEMOS}}</ul>
+          </article>
+
+          <article class="panel" data-testid="pinned-files-panel">
+            <div class="panel-head">
+              <h2>{{PINNED_MEMOS_TITLE}}</h2>
+              <p class="panel-subtitle">{{PINNED_MEMOS_SUBTITLE}}</p>
+            </div>
+            <ul class="recent-list">{{PINNED_MEMOS}}</ul>
+          </article>
+
+          <article class="panel" data-testid="folder-distribution-panel">
+            <div class="panel-head">
+              <h2>{{FOLDER_SUMMARY_TITLE}}</h2>
+              <p class="panel-subtitle">{{FOLDER_SUMMARY_SUBTITLE}}</p>
+              <p class="panel-meta">{{FOLDER_SUMMARY_META}}</p>
+            </div>
+            <ul class="folder-list">{{FOLDER_ROWS}}</ul>
+          </article>
+
+          <article class="panel" data-testid="tags-panel">
+            <div class="panel-head">
+              <h2>{{TAGS_TITLE}}</h2>
+              <p class="panel-subtitle">{{TAGS_SUBTITLE}}</p>
+              <p class="panel-meta">{{TAGS_META}}</p>
+            </div>
+            <ul class="tag-list">{{TAG_ROWS}}</ul>
+          </article>
+        </div>
+
+        <div class="stack">
+          <article class="panel" data-testid="workspace-panel">
+            <div class="panel-head">
+              <h2>{{WORKSPACE_STATUS_TITLE}}</h2>
+              <p class="panel-subtitle">{{WORKSPACE_STATUS_SUBTITLE}}</p>
+            </div>
+            <div class="kv-grid">
+              <div class="kv-row">
+                <span class="kv-label">{{KV_MEMO_ROOT}}</span>
+                <span class="kv-value">{{MEMO_ROOT}}</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-label">{{KV_TODAY_DIRECTORY}}</span>
+                <span class="kv-value">{{TODAY_DIRECTORY}}</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-label">{{KV_TODAY_MEMO_PATH}}</span>
+                <span class="kv-value">{{TODAY_MEMO_PATH}}</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-label">{{KV_DEFAULT_TEMPLATE}}</span>
+                <span class="kv-value">{{DEFAULT_TEMPLATE}}</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-label">{{KV_WORKSPACE_FILE}}</span>
+                <span class="kv-value">{{WORKSPACE_FILE_BLOCK}}</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-label">{{KV_CONFIGURATION}}</span>
+                <span class="kv-value">{{CONFIG_BLOCK}}</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <h2>{{MAINTENANCE_ASSETS_TITLE}}</h2>
+              <p class="panel-subtitle">{{MAINTENANCE_ASSETS_SUBTITLE}}</p>
+            </div>
+            <div class="maintenance-section" data-testid="templates-panel">
+              <div class="panel-head">
+                <h3>{{TEMPLATES_TITLE}}</h3>
+                <p class="panel-subtitle">{{TEMPLATES_SUBTITLE}}</p>
+              </div>
+{{TEMPLATE_SECTION}}
+            </div>
+            <div class="maintenance-section" data-testid="snippets-panel">
+              <div class="panel-head">
+                <h3>{{SNIPPETS_TITLE}}</h3>
+                <p class="panel-subtitle">{{SNIPPETS_SUBTITLE}}</p>
+              </div>
+{{SNIPPET_SECTION}}
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <script nonce="{{NONCE}}">
+{{SCRIPT}}
+      </script>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,201 @@
+import { applyTemplateVariables, loadWebviewTemplate } from "../../shared/webviewTemplate";
+import type { MemoBoxUiText } from "../../shared/uiText";
+import type { SetupViewModel } from "./setupViewModel";
+
+export function renderSetupHtml(
+  model: SetupViewModel,
+  nonce: string,
+  step: "memoRoot" | "workspace" | "done",
+  ui: MemoBoxUiText
+): string {
+  const template = loadWebviewTemplate("setup.html");
+  const css = loadWebviewTemplate("setup.css");
+  const text = ui.setup;
+
+  return applyTemplateVariables(template, {
+    NONCE: nonce,
+    CSS: css,
+    PAGE_TITLE: escapeHtml(text.pageTitle),
+    VERSION: escapeHtml(model.version),
+    SETUP_TITLE: escapeHtml(text.title),
+    SETUP_COPY: escapeHtml(text.heroCopy),
+    STEP_PILLS: [
+      renderStepPill(text.stepMemoRoot, step === "memoRoot"),
+      renderStepPill(text.stepWorkspace, step === "workspace"),
+      renderStepPill(text.stepReady, step === "done")
+    ].join(""),
+    STEP_CONTENT: renderStepContent(model, step, ui),
+    SCRIPT: buildSetupScript()
+  });
+}
+
+function renderStepContent(model: SetupViewModel, step: "memoRoot" | "workspace" | "done", ui: MemoBoxUiText): string {
+  switch (step) {
+    case "workspace":
+      return renderWorkspaceStep(model, ui);
+    case "done":
+      return renderDoneStep(model, ui);
+    case "memoRoot":
+    default:
+      return renderMemoRootStep(model, ui);
+  }
+}
+
+function renderMemoRootStep(model: SetupViewModel, ui: MemoBoxUiText): string {
+  const text = ui.setup;
+  const heading = model.memoRootConfigured ? text.memoRootHeadingFinish : text.memoRootHeadingChoose;
+  const copy = model.memoRootConfigured ? text.memoRootCopyFinish : text.memoRootCopyChoose;
+  const primaryLabel = model.memoRootConfigured ? text.createThisFolder : text.useSuggestedFolder;
+  const pathLabel = model.memoRootConfigured ? text.configuredPath : text.suggestedPath;
+
+  return `
+    <div>
+      <h2>${escapeHtml(heading)}</h2>
+      <p class="muted" style="margin-top: 8px;">${escapeHtml(copy)}</p>
+      <div class="actions">
+        <button class="primary" data-use-suggested-dir="${escapeHtml(model.setupTargetPath)}">${escapeHtml(primaryLabel)}</button>
+        <button data-pick-memo-dir>${escapeHtml(text.chooseFolder)}</button>
+        <button data-command="memobox.openSettings">${escapeHtml(text.openSettings)}</button>
+      </div>
+    </div>
+    <div class="stack">
+      <section class="info-card">
+        <span class="label">${escapeHtml(pathLabel)}</span>
+        <span class="value">${escapeHtml(model.setupTargetPath)}</span>
+      </section>
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.storedAs)}</span>
+        <span class="value">${escapeHtml(text.storedAsGlobal)}</span>
+      </section>
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.createdFolders)}</span>
+        <span class="value"><code>${escapeHtml(model.metaDir)}/templates</code><br /><code>${escapeHtml(model.metaDir)}/snippets</code></span>
+      </section>
+    </div>
+  `;
+}
+
+function renderWorkspaceStep(model: SetupViewModel, ui: MemoBoxUiText): string {
+  const text = ui.setup;
+  return `
+    <div>
+      <h2>${escapeHtml(text.workspaceHeading)}</h2>
+      <p class="muted" style="margin-top: 8px;">${escapeHtml(text.workspaceCopy)}</p>
+      <div class="actions">
+        <button class="primary" data-create-workspace>${escapeHtml(text.createWorkspaceFile)}</button>
+        <button data-command="memobox.openMemoFolder">${escapeHtml(text.openMemoFolder)}</button>
+        <button data-finish-setup>${escapeHtml(text.skipForNow)}</button>
+      </div>
+    </div>
+    <div class="stack">
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.workspaceFile)}</span>
+        <span class="value">${escapeHtml(model.workspaceFilePath)}</span>
+      </section>
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.includedSettings)}</span>
+        <span class="value"><code>memobox.adminOpenOnStartup</code><br /><code>memobox.templatesDir = .templates</code><br /><code>memobox.snippetsDir = .snippets</code></span>
+      </section>
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.recommendations)}</span>
+        <span class="value">MemoBox<br />Markdown All in One</span>
+      </section>
+    </div>
+  `;
+}
+
+function renderDoneStep(model: SetupViewModel, ui: MemoBoxUiText): string {
+  const text = ui.setup;
+  return `
+    <div>
+      <h2>${escapeHtml(text.readyHeading)}</h2>
+      <p class="muted" style="margin-top: 8px;">${escapeHtml(text.readyCopy)}</p>
+      <div class="actions">
+        <button class="primary" data-command="memobox.newMemo">${escapeHtml(text.createFirstMemo)}</button>
+        <button data-command="memobox.openAdmin">${escapeHtml(text.openAdmin)}</button>
+        ${model.workspaceFileExists ? `<button data-open-workspace="${escapeHtml(model.workspaceFilePath)}">${escapeHtml(text.openWorkspace)}</button>` : ""}
+        <button data-command="memobox.openMemoFolder">${escapeHtml(text.openMemoFolder)}</button>
+      </div>
+    </div>
+    <div class="stack">
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.readyMemoRoot)}</span>
+        <span class="value">${escapeHtml(model.setupTargetPath)}</span>
+      </section>
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.workspaceFile)}</span>
+        <span class="value">${escapeHtml(model.workspaceFileExists ? model.workspaceFilePath : text.notCreated)}</span>
+      </section>
+      <section class="info-card">
+        <span class="label">${escapeHtml(text.readyNext)}</span>
+        <span class="value">${escapeHtml(text.readyNextCopy)}</span>
+      </section>
+    </div>
+  `;
+}
+
+function renderStepPill(label: string, active: boolean): string {
+  return `<span class="step-pill ${active ? "step-pill-active" : ""}">${escapeHtml(label)}</span>`;
+}
+
+function buildSetupScript(): string {
+  return `
+    const vscode = acquireVsCodeApi();
+
+    document.querySelectorAll("[data-pick-memo-dir]").forEach((element) => {
+      element.addEventListener("click", () => {
+        vscode.postMessage({ type: "pickMemoDir" });
+      });
+    });
+
+    document.querySelectorAll("[data-use-suggested-dir]").forEach((element) => {
+      element.addEventListener("click", () => {
+        const path = element.getAttribute("data-use-suggested-dir") || undefined;
+        vscode.postMessage({ type: "useSuggestedMemoDir", path });
+      });
+    });
+
+    document.querySelectorAll("[data-command]").forEach((element) => {
+      element.addEventListener("click", () => {
+        const command = element.getAttribute("data-command");
+        if (!command) {
+          return;
+        }
+
+        vscode.postMessage({ type: "runCommand", command });
+      });
+    });
+
+    document.querySelectorAll("[data-create-workspace]").forEach((element) => {
+      element.addEventListener("click", () => {
+        vscode.postMessage({ type: "createWorkspaceFile" });
+      });
+    });
+
+    document.querySelectorAll("[data-open-workspace]").forEach((element) => {
+      element.addEventListener("click", () => {
+        const path = element.getAttribute("data-open-workspace");
+        if (!path) {
+          return;
+        }
+
+        vscode.postMessage({ type: "openWorkspaceFile", path });
+      });
+    });
+
+    document.querySelectorAll("[data-finish-setup]").forEach((element) => {
+      element.addEventListener("click", () => {
+        vscode.postMessage({ type: "finishSetup" });
+      });
+    });
+  `.trim();
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
