@@ -46,6 +46,12 @@ export async function todoMemosCommand(): Promise<void> {
     return;
   }
 
+  if (searchResult.skippedFiles > 0) {
+    await vscode.window.showWarningMessage(
+      `MemoBox: Todo skipped ${searchResult.skippedFiles} unreadable file${searchResult.skippedFiles === 1 ? "" : "s"}.`
+    );
+  }
+
   const { matches } = searchResult;
   if (matches.length === 0) {
     await vscode.window.showInformationMessage("MemoBox: No todo items found.");

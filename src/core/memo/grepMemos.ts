@@ -8,6 +8,7 @@ export interface MemoSearchResult {
   readonly matches: readonly MemoTextMatch[];
   readonly truncated: boolean;
   readonly cancelled: boolean;
+  readonly skippedFiles: number;
 }
 
 export async function grepMemos(
@@ -21,25 +22,33 @@ export async function grepMemos(
 ): Promise<MemoSearchResult> {
   const trimmedQuery = query.trim();
   if (trimmedQuery === "") {
-    return { matches: [], truncated: false, cancelled: false };
+    return { matches: [], truncated: false, cancelled: false, skippedFiles: 0 };
   }
 
   const files = filterEntriesByGrepScope(await getMemoIndexEntries(settings), scope);
   const results: MemoTextMatch[] = [];
   const caseSensitive = hasUppercase(trimmedQuery);
   const maxResults = options.maxResults && options.maxResults > 0 ? options.maxResults : Number.POSITIVE_INFINITY;
+  let skippedFiles = 0;
 
   for (const file of files) {
     if (options.isCancellationRequested?.()) {
-      return { matches: results, truncated: false, cancelled: true };
+      return { matches: results, truncated: false, cancelled: true, skippedFiles };
     }
 
-    const content = await readFile(file.absolutePath, "utf8");
+    let content: string;
+    try {
+      content = await readFile(file.absolutePath, "utf8");
+    } catch {
+      skippedFiles += 1;
+      continue;
+    }
+
     const lines = content.split(/\r?\n/u);
 
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       if (options.isCancellationRequested?.()) {
-        return { matches: results, truncated: false, cancelled: true };
+        return { matches: results, truncated: false, cancelled: true, skippedFiles };
       }
 
       const line = lines[lineIndex] ?? "";
@@ -56,13 +65,13 @@ export async function grepMemos(
         });
 
         if (results.length >= maxResults) {
-          return { matches: results, truncated: true, cancelled: false };
+          return { matches: results, truncated: true, cancelled: false, skippedFiles };
         }
       }
     }
   }
 
-  return { matches: results, truncated: false, cancelled: false };
+  return { matches: results, truncated: false, cancelled: false, skippedFiles };
 }
 
 function hasUppercase(value: string): boolean {

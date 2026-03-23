@@ -1,5 +1,6 @@
 import { applyTemplateVariables, loadWebviewTemplate } from "../../shared/webviewTemplate";
 import type { MemoBoxUiText } from "../../shared/uiText";
+import type { MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import type {
   AdminCountRow,
   AdminDashboardModel,
@@ -62,7 +63,17 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
     CONFIG_BLOCK: [
       `<code>datePathFormat</code>: ${escapeHtml(model.datePathFormat)}`,
       `<code>metaDir</code>: ${escapeHtml(model.metaDir)}`,
-      `<code>locale</code>: ${escapeHtml(model.locale)}`
+      `<code>locale</code>: ${escapeHtml(model.locale)}`,
+      `<code>maxScanDepth</code>: ${escapeHtml(String(model.maxScanDepth))}`,
+      `<code>excludeDirectories</code>: ${escapeHtml(model.excludeDirectories.join(", ") || "n/a")}`,
+      `<code>indexLoadSource</code>: ${escapeHtml(model.indexLoadSource)}`,
+      `<code>indexBackup</code>: ${escapeHtml(model.indexBackupExists ? "present" : "missing")}`,
+      `<code>indexTransientBackup</code>: ${escapeHtml(model.indexTransientBackupExists ? "present" : "missing")}`,
+      `<code>aiEnabled</code>: ${escapeHtml(model.aiEnabled ? "true" : "false")}`,
+      `<code>aiProfile</code>: ${escapeHtml(model.aiProfileName || "n/a")}`,
+      `<code>aiProvider</code>: ${escapeHtml(model.aiProvider || "n/a")}`,
+      `<code>aiModel</code>: ${escapeHtml(model.aiModel || "n/a")}`,
+      `<code>aiApiKeySource</code>: ${escapeHtml(getAiApiKeySourceLabel(model, ui))}`
     ].join("<br />"),
     MAINTENANCE_ASSETS_TITLE: escapeHtml(text.maintenanceAssetsTitle),
     MAINTENANCE_ASSETS_SUBTITLE: escapeHtml(text.maintenanceAssetsSubtitle),
@@ -78,22 +89,44 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
 
 function renderActionButtons(model: AdminDashboardModel, ui: MemoBoxUiText): string {
   const text = ui.admin;
-  const actionButtons = [
+  const dailyButtons: readonly { command: string; label: string; disabled: boolean; variant: "primary" | "default" | "subtle" }[] = [
     { command: "memobox.newMemo", label: text.actionNewMemo, disabled: !model.memoRootReady, variant: "primary" },
     { command: "memobox.quickMemo", label: text.actionQuickMemo, disabled: !model.memoRootReady, variant: "default" },
     { command: "memobox.listMemos", label: text.actionListMemos, disabled: !model.memoRootReady, variant: "default" },
     { command: "memobox.listTags", label: text.actionTags, disabled: !model.memoRootReady, variant: "default" },
     { command: "memobox.grepMemos", label: text.actionGrep, disabled: !model.memoRootReady, variant: "default" },
-    { command: "memobox.todoMemos", label: text.actionTodo, disabled: !model.memoRootReady, variant: "default" },
+    { command: "memobox.todoMemos", label: text.actionTodo, disabled: !model.memoRootReady, variant: "default" }
+  ];
+  const maintenanceButtons: readonly { command: string; label: string; disabled: boolean; variant: "primary" | "default" | "subtle" }[] = [
     { command: "memobox.openMemoFolder", label: text.actionOpenFolder, disabled: !model.memoRootReady, variant: "default" },
+    { command: "memobox.createWorkspace", label: text.actionCreateWorkspace, disabled: !model.memoRootReady, variant: "default" },
+    { command: "memobox.openSetup", label: text.actionOpenSetup, disabled: false, variant: "default" },
     { command: "memobox.refreshIndex", label: text.actionRefreshIndex, disabled: !model.memoRootReady, variant: "subtle" },
+    { command: "memobox.rebuildIndex", label: text.actionRebuildIndex, disabled: !model.memoRootReady, variant: "subtle" },
+    { command: "memobox.clearIndexCache", label: text.actionClearIndexCache, disabled: !model.memoRootReady, variant: "subtle" },
+    { command: "memobox.aiSetApiKey", label: text.actionSetAiApiKey, disabled: !model.aiEnabled, variant: "subtle" },
+    { command: "memobox.aiClearApiKey", label: text.actionClearAiApiKey, disabled: !model.aiEnabled, variant: "subtle" },
     { command: "memobox.admin.refresh", label: text.actionReloadAdmin, disabled: false, variant: "subtle" },
     { command: "memobox.admin.settings", label: text.actionSettings, disabled: false, variant: "subtle" }
   ];
 
-  return actionButtons
-    .map(
-      (button) => `
+  return [
+    renderActionGroup(text.actionGroupDaily, dailyButtons),
+    renderActionGroup(text.actionGroupMaintenance, maintenanceButtons)
+  ].join("");
+}
+
+function renderActionGroup(
+  label: string,
+  actionButtons: readonly { command: string; label: string; disabled: boolean; variant: "primary" | "default" | "subtle" }[]
+): string {
+  return `
+    <section class="toolbar-group">
+      <span class="toolbar-label">${escapeHtml(label)}</span>
+      <div class="toolbar-actions">
+        ${actionButtons
+          .map(
+            (button) => `
         <button
           class="action-button action-button-${button.variant}"
           data-command="${button.command}"
@@ -102,17 +135,17 @@ function renderActionButtons(model: AdminDashboardModel, ui: MemoBoxUiText): str
           ${escapeHtml(button.label)}
         </button>
       `
-    )
-    .join("");
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function renderWarningBanner(model: AdminDashboardModel, ui: MemoBoxUiText): string {
-  if (model.memoRootReady) {
-    return "";
-  }
-
   const text = ui.admin;
-  return `
+  if (!model.memoRootReady) {
+    return `
       <section class="warning-banner" aria-live="polite">
         <div class="warning-title">
           <span class="status-dot status-dot-danger" aria-hidden="true"></span>
@@ -124,6 +157,28 @@ function renderWarningBanner(model: AdminDashboardModel, ui: MemoBoxUiText): str
         </div>
       </section>
   `;
+  }
+
+  if (model.memoRootLooksBroad) {
+    return `
+      <section class="warning-banner" aria-live="polite">
+        <div class="warning-title">
+          <span class="status-dot status-dot-warning" aria-hidden="true"></span>
+          <strong>${escapeHtml(text.warningBroadRootTitle)}</strong>
+        </div>
+        <p>${escapeHtml(text.warningBroadRootCopy)}</p>
+        ${renderBroadRootReasonLine(model.memoRootRiskCodes, ui)}
+        ${renderBroadRootRecommendationLine(model.recommendedMemoRoot, ui)}
+        <div class="asset-actions" style="margin-top: 10px;">
+          <button class="mini-button" data-use-recommended-root="${escapeHtml(model.recommendedMemoRoot)}">${escapeHtml(text.warningUseRecommendedPath)}</button>
+          <button class="mini-button" data-command="memobox.openSetup">${escapeHtml(text.warningOpenSetup)}</button>
+          <button class="mini-button" data-command="memobox.openSettings">${escapeHtml(text.actionSettings)}</button>
+        </div>
+      </section>
+  `;
+  }
+
+  return "";
 }
 
 function renderSummaryCards(model: AdminDashboardModel, ui: MemoBoxUiText): string {
@@ -158,6 +213,12 @@ function renderSummaryCards(model: AdminDashboardModel, ui: MemoBoxUiText): stri
       value: maintenanceIssues === 0 ? text.summaryHealthy : text.summaryIssues(maintenanceIssues),
       detail: buildMaintenanceDetail(model, ui),
       tone: maintenanceIssues === 0 ? "good" : "warning"
+    },
+    {
+      label: text.summaryAi,
+      value: model.aiEnabled ? (model.aiConfigured ? text.summaryAiConfigured : text.summaryAiNeedsSetup) : text.summaryAiOff,
+      detail: buildAiDetail(model, ui),
+      tone: !model.aiEnabled ? "default" : model.aiConfigured ? "good" : "warning"
     }
   ];
 
@@ -265,7 +326,74 @@ function buildAdminScript(): string {
             vscode.postMessage({ type: "unpinFile", path });
           });
         });
+
+        document.querySelectorAll("[data-use-recommended-root]").forEach((element) => {
+          element.addEventListener("click", () => {
+            const path = element.getAttribute("data-use-recommended-root");
+            if (!path) {
+              return;
+            }
+
+            vscode.postMessage({ type: "useRecommendedMemoRoot", path });
+          });
+        });
   `.trim();
+}
+
+function renderBroadRootReasonLine(
+  riskCodes: readonly MemoRootRiskCode[],
+  ui: MemoBoxUiText
+): string {
+  if (riskCodes.length === 0) {
+    return "";
+  }
+
+  const reasons = riskCodes.map((riskCode) => ui.formatMemoRootRisk(riskCode)).join(", ");
+  return `<p class="warning-reasons">${escapeHtml(ui.admin.warningBroadRootReasons(reasons))}</p>`;
+}
+
+function renderBroadRootRecommendationLine(recommendedMemoRoot: string, ui: MemoBoxUiText): string {
+  if (recommendedMemoRoot.trim() === "") {
+    return "";
+  }
+
+  return `<p class="warning-reasons">${escapeHtml(ui.admin.warningBroadRootRecommendation(recommendedMemoRoot))}</p>`;
+}
+
+function buildAiDetail(model: AdminDashboardModel, ui: MemoBoxUiText): string {
+  const text = ui.admin;
+  if (!model.aiEnabled) {
+    return escapeHtml(text.summaryAiDisabledDetail);
+  }
+
+  if (!model.aiConfigured) {
+    return escapeHtml(model.aiIssueSummary || text.summaryAiNeedsSetupDetail);
+  }
+
+  return [
+    escapeHtml(model.aiProfileName),
+    escapeHtml(model.aiProvider),
+    escapeHtml(model.aiModel),
+    escapeHtml(model.aiEndpoint),
+    escapeHtml(text.summaryAiKey(getAiApiKeySourceLabel(model, ui)))
+  ].join(" | ");
+}
+
+function getAiApiKeySourceLabel(model: AdminDashboardModel, ui: MemoBoxUiText): string {
+  const text = ui.admin;
+
+  switch (model.aiApiKeySource) {
+    case "settings":
+      return text.summaryAiKeySettings;
+    case "secretStorage":
+      return text.summaryAiKeySecretStorage;
+    case "environment":
+      return text.summaryAiKeyEnvironment;
+    case "notRequired":
+      return text.summaryAiKeyNotRequired;
+    default:
+      return text.summaryAiKeyMissing;
+  }
 }
 
 function renderTemplateSection(model: AdminDashboardModel, ui: MemoBoxUiText): string {

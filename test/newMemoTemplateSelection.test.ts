@@ -8,6 +8,7 @@ import {
 } from "../src/core/meta/memoAssets";
 
 function createSettings(overrides: Partial<MemoBoxSettings> = {}): MemoBoxSettings {
+  const { excludeDirectories, maxScanDepth, ...restOverrides } = overrides;
   return {
     memodir: "/memo",
     datePathFormat: "yyyy/MM",
@@ -31,7 +32,30 @@ function createSettings(overrides: Partial<MemoBoxSettings> = {}): MemoBoxSettin
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
     locale: "auto",
-    ...overrides
+    aiEnabled: false,
+    ai: {
+      defaultProfile: "local",
+      profiles: {
+        local: {
+          provider: "ollama",
+          endpoint: "http://localhost:11434",
+          model: "qwen3:1.7b",
+          apiKey: "",
+          apiKeyEnv: "",
+          tagLanguage: "auto",
+          timeoutMs: 300000
+        }
+      },
+      network: {
+        proxy: "",
+        proxyBypass: "",
+        tlsRejectUnauthorized: true,
+        tlsCaCert: ""
+      }
+    },
+    ...restOverrides,
+    excludeDirectories: excludeDirectories ?? ["node_modules", "dist", "build", "out", "coverage", "vendor"],
+    maxScanDepth: maxScanDepth ?? 8
   };
 }
 

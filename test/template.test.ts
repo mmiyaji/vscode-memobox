@@ -7,6 +7,7 @@ import type { MemoBoxSettings } from "../src/core/config/types";
 import { buildNewMemoContent, renderMemoTemplate } from "../src/core/memo/template";
 
 function createSettings(memodir: string, overrides: Partial<MemoBoxSettings> = {}): MemoBoxSettings {
+  const { excludeDirectories, maxScanDepth, ...restOverrides } = overrides;
   return {
     memodir,
     datePathFormat: "yyyy/MM",
@@ -30,7 +31,30 @@ function createSettings(memodir: string, overrides: Partial<MemoBoxSettings> = {
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
     locale: "auto",
-    ...overrides
+    aiEnabled: false,
+    ai: {
+      defaultProfile: "local",
+      profiles: {
+        local: {
+          provider: "ollama",
+          endpoint: "http://localhost:11434",
+          model: "qwen3:1.7b",
+          apiKey: "",
+          apiKeyEnv: "",
+          tagLanguage: "auto",
+          timeoutMs: 300000
+        }
+      },
+      network: {
+        proxy: "",
+        proxyBypass: "",
+        tlsRejectUnauthorized: true,
+        tlsCaCert: ""
+      }
+    },
+    ...restOverrides,
+    excludeDirectories: excludeDirectories ?? ["node_modules", "dist", "build", "out", "coverage", "vendor"],
+    maxScanDepth: maxScanDepth ?? 8
   };
 }
 
@@ -38,12 +62,19 @@ test("renderMemoTemplate replaces supported title and date placeholders", () => 
   assert.equal(renderMemoTemplate("# {{date}} {{.Title}}", { date: "2026-03-22", title: "Plan" }), "# 2026-03-22 Plan");
 });
 
+test("renderMemoTemplate replaces title inside single-quoted frontmatter templates", () => {
+  assert.equal(
+    renderMemoTemplate("title: '{{title}}'", { date: "2026-03-22", title: "Plan" }),
+    "title: 'Plan'"
+  );
+});
+
 test("buildNewMemoContent uses an explicit template path when one is selected", async () => {
   const memodir = await mkdtemp(join(tmpdir(), "memobox-template-"));
 
   try {
     const templatePath = join(memodir, "meeting.md");
-    await writeFile(templatePath, "# {{date}}\n\n{{title}}\n", "utf8");
+    await writeFile(templatePath, "---\ntitle: '{{title}}'\ntags:\n  - meeting\n---\n\n# {{date}}\n\n{{title}}\n", "utf8");
 
     const content = await buildNewMemoContent(
       createSettings(memodir),
@@ -52,7 +83,7 @@ test("buildNewMemoContent uses an explicit template path when one is selected", 
       templatePath
     );
 
-    assert.equal(content, "# 2026-03-22\n\nWeekly review\n");
+    assert.equal(content, "---\ntitle: 'Weekly review'\ntags:\n  - meeting\n---\n\n# 2026-03-22\n\nWeekly review\n");
   } finally {
     await rm(memodir, { force: true, recursive: true });
   }

@@ -33,8 +33,12 @@ export async function newMemo(): Promise<void> {
   const alreadyExists = await fileExists(filePath);
 
   if (!alreadyExists) {
-    const selectedTemplatePath = await pickNewMemoTemplate(settings);
-    const content = await buildNewMemoContent(settings, title, now, selectedTemplatePath);
+    const templateSelection = await pickNewMemoTemplate(settings);
+    if (templateSelection.cancelled) {
+      return;
+    }
+
+    const content = await buildNewMemoContent(settings, title, now, templateSelection.templatePath);
     await writeFile(filePath, content, "utf8");
   }
 

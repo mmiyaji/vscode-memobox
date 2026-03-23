@@ -46,6 +46,26 @@ test("renderMarkdownBrowserPreviewHtml renders markdown and base href", () => {
   assert.match(html, /<pre><code class="language-ts">/);
 });
 
+test("renderMarkdownBrowserPreviewHtml renders yaml frontmatter separately before markdown body", () => {
+  const html = renderMarkdownBrowserPreviewHtml({
+    getText: () =>
+      "---\n" +
+      "title: 'Example note'\n" +
+      "tags:\n" +
+      "  - inbox\n" +
+      "---\n\n" +
+      "# Title\n\n" +
+      "Body text",
+    fileName: "C:\\memo\\frontmatter.md",
+    uri: { scheme: "file", fsPath: "C:\\memo\\frontmatter.md" }
+  });
+
+  assert.match(html, /<span class="frontmatter-label">Frontmatter<\/span>/);
+  assert.match(html, /<code class="language-yaml">title: &#39;Example note&#39;\ntags:\n {2}- inbox<\/code>/);
+  assert.match(html, /<h1>Title<\/h1>/);
+  assert.match(html, /<p>Body text<\/p>/);
+});
+
 test("writeMarkdownBrowserPreview writes an html file for the current document contents", async () => {
   const previewPath = await writeMarkdownBrowserPreview({
     getText: () => "Hello **world**",

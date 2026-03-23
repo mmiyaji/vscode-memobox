@@ -4,7 +4,7 @@ This document summarizes what is currently present in `vscode-memo-life-for-you`
 
 ## Feature Groups
 
-### Must-Have
+### Implemented In 0.1.x
 
 - Memo creation and quick append workflows
 - Memo list/edit picker
@@ -15,12 +15,15 @@ This document summarizes what is currently present in `vscode-memo-life-for-you`
 - Memo folder opening
 - Admin setup flow and dashboard
 - Typed settings and metadata directory support
-
-### Later
-
 - Workspace generation flow
 - Snippet loading and watching
 - Multi-language package metadata
+
+### Later
+
+- richer search presentation and diagnostics
+- file watchers beyond snippet completion, where justified by runtime cost
+- additional release polish such as screenshots and marketplace-facing copy
 
 ### Optional
 
@@ -31,7 +34,7 @@ This document summarizes what is currently present in `vscode-memo-life-for-you`
 
 ## Legacy Command Inventory
 
-Must-have candidates:
+Implemented:
 
 - `extension.memoNew`
 - `extension.memoQuick`
@@ -41,11 +44,10 @@ Must-have candidates:
 - `extension.memoReDate`
 - `extension.memoOpenFolder`
 - `extension.memoAdmin`
+- `extension.memoConfig`
+- `extension.memoOpenChrome` (mapped to browser-based Markdown preview)
 
 Later candidates:
-
-- `extension.memoConfig`
-- `extension.memoOpenChrome` (map to browser-based Markdown preview instead of legacy Chrome launcher)
 
 Optional AI candidates:
 
@@ -127,3 +129,10 @@ AI:
 - Recreate README and release naming under the MemoBox identity
 - Rebuild package localization files to avoid carrying forward broken strings and encoding issues
 - Exclude generated directories and packaged artifacts from source control
+
+## Next Phase
+
+- tighten release packaging and documentation
+- continue hardening file-system edge cases for large memo trees
+- expand E2E around setup, search, and template-driven memo creation
+- defer AI to a separately designed release line

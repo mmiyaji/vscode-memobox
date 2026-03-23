@@ -29,6 +29,13 @@
         border-radius: 6px;
         background: var(--panel-bg);
       }
+      .warning-banner {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--vscode-inputValidation-warningBorder, var(--focus-border));
+        border-radius: 6px;
+        background: var(--surface-bg);
+      }
       .panel {
         padding: 20px;
       }
@@ -55,6 +62,11 @@
         line-height: 1.55;
       }
       .muted { color: var(--muted); }
+      .warning-banner p,
+      .warning-reasons {
+        margin-top: 8px;
+        color: var(--muted);
+      }
       .hero-copy { margin-top: 10px; }
       .grid {
         display: grid;

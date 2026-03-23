@@ -7,16 +7,24 @@ import {
 import type { MemoBoxSettings } from "../../core/config/types";
 import { areSameMemoPaths } from "../../core/memo/pathing";
 
-export async function pickNewMemoTemplate(settings: MemoBoxSettings): Promise<string | undefined> {
+export interface PickNewMemoTemplateResult {
+  readonly cancelled: boolean;
+  readonly templatePath?: string;
+}
+
+export async function pickNewMemoTemplate(settings: MemoBoxSettings): Promise<PickNewMemoTemplateResult> {
   const templates = await listTemplateAssets(settings);
   const plan = buildNewMemoTemplateSelectionPlan(settings, templates);
 
   if (plan.mode === "template") {
-    return plan.templatePath;
+    return {
+      cancelled: false,
+      templatePath: plan.templatePath
+    };
   }
 
   if (plan.mode !== "pick") {
-    return undefined;
+    return { cancelled: false };
   }
 
   const picked = await vscode.window.showQuickPick(
@@ -32,11 +40,18 @@ export async function pickNewMemoTemplate(settings: MemoBoxSettings): Promise<st
     }
   );
 
-  if (!picked || picked.option.kind === "default") {
-    return undefined;
+  if (!picked) {
+    return { cancelled: true };
   }
 
-  return picked.option.absolutePath;
+  if (picked.option.kind === "default") {
+    return { cancelled: false };
+  }
+
+  return {
+    cancelled: false,
+    templatePath: picked.option.absolutePath
+  };
 }
 
 function buildOptionDescription(option: NewMemoTemplateSelectionOption): string {

@@ -1,3 +1,10 @@
+---
+title: '{{title}}'
+tags:
+  - meeting
+date: {{date}}
+---
+
 # {{.Date}} {{.Title}}
 
 ## Attendees

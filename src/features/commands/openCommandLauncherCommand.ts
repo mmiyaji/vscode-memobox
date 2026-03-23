@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { readSettings } from "../../core/config/settings";
 import { getMemoCommandLauncherDescriptors } from "./commandLauncherItems";
 
 interface MemoCommandLauncherItem extends vscode.QuickPickItem {
@@ -6,7 +7,7 @@ interface MemoCommandLauncherItem extends vscode.QuickPickItem {
 }
 
 export async function openCommandLauncherCommand(): Promise<void> {
-  const descriptors = getMemoCommandLauncherDescriptors();
+  const descriptors = getMemoCommandLauncherDescriptors({ aiEnabled: readSettings().aiEnabled });
   const items: MemoCommandLauncherItem[] = [];
   let currentGroup: string | undefined;
 

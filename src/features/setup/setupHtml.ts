@@ -1,5 +1,6 @@
 import { applyTemplateVariables, loadWebviewTemplate } from "../../shared/webviewTemplate";
 import type { MemoBoxUiText } from "../../shared/uiText";
+import type { MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import type { SetupViewModel } from "./setupViewModel";
 
 export function renderSetupHtml(
@@ -49,17 +50,22 @@ function renderMemoRootStep(model: SetupViewModel, ui: MemoBoxUiText): string {
   const pathLabel = model.memoRootConfigured ? text.configuredPath : text.suggestedPath;
 
   return `
-    <div>
-      <h2>${escapeHtml(heading)}</h2>
+    <div data-testid="setup-step-memo-root">
+      <h2 data-testid="setup-root-heading">${escapeHtml(heading)}</h2>
       <p class="muted" style="margin-top: 8px;">${escapeHtml(copy)}</p>
+      ${
+        model.memoRootLooksBroad
+          ? `<div class="warning-banner" data-testid="setup-broad-root-warning"><strong>${escapeHtml(text.broadRootWarningTitle)}</strong><p>${escapeHtml(text.broadRootWarningCopy)}</p>${renderBroadRootReasonLine(model.memoRootRiskCodes, ui, "setup")}${renderBroadRootRecommendationLine(model.recommendedMemoRoot, ui, "setup")}<div class="actions"><button data-testid="setup-use-recommended-folder" data-use-suggested-dir="${escapeHtml(model.recommendedMemoRoot)}">${escapeHtml(text.useRecommendedPath)}</button></div></div>`
+          : ""
+      }
       <div class="actions">
-        <button class="primary" data-use-suggested-dir="${escapeHtml(model.setupTargetPath)}">${escapeHtml(primaryLabel)}</button>
-        <button data-pick-memo-dir>${escapeHtml(text.chooseFolder)}</button>
-        <button data-command="memobox.openSettings">${escapeHtml(text.openSettings)}</button>
+        <button class="primary" data-testid="setup-use-suggested-folder" data-use-suggested-dir="${escapeHtml(model.setupTargetPath)}">${escapeHtml(primaryLabel)}</button>
+        <button data-testid="setup-choose-folder" data-pick-memo-dir>${escapeHtml(text.chooseFolder)}</button>
+        <button data-testid="setup-open-settings" data-command="memobox.openSettings">${escapeHtml(text.openSettings)}</button>
       </div>
     </div>
     <div class="stack">
-      <section class="info-card">
+      <section class="info-card" data-testid="setup-target-path-card">
         <span class="label">${escapeHtml(pathLabel)}</span>
         <span class="value">${escapeHtml(model.setupTargetPath)}</span>
       </section>
@@ -75,20 +81,51 @@ function renderMemoRootStep(model: SetupViewModel, ui: MemoBoxUiText): string {
   `;
 }
 
+function renderBroadRootReasonLine(
+  riskCodes: readonly MemoRootRiskCode[],
+  ui: MemoBoxUiText,
+  context: "setup" | "admin"
+): string {
+  if (riskCodes.length === 0) {
+    return "";
+  }
+
+  const reasons = riskCodes.map((riskCode) => ui.formatMemoRootRisk(riskCode)).join(", ");
+  const message =
+    context === "setup" ? ui.setup.broadRootReasons(reasons) : ui.admin.warningBroadRootReasons(reasons);
+  return `<p class="warning-reasons">${escapeHtml(message)}</p>`;
+}
+
+function renderBroadRootRecommendationLine(
+  recommendedMemoRoot: string,
+  ui: MemoBoxUiText,
+  context: "setup" | "admin"
+): string {
+  if (recommendedMemoRoot.trim() === "") {
+    return "";
+  }
+
+  const message =
+    context === "setup"
+      ? ui.setup.broadRootRecommendation(recommendedMemoRoot)
+      : ui.admin.warningBroadRootRecommendation(recommendedMemoRoot);
+  return `<p class="warning-reasons">${escapeHtml(message)}</p>`;
+}
+
 function renderWorkspaceStep(model: SetupViewModel, ui: MemoBoxUiText): string {
   const text = ui.setup;
   return `
-    <div>
-      <h2>${escapeHtml(text.workspaceHeading)}</h2>
+    <div data-testid="setup-step-workspace">
+      <h2 data-testid="setup-workspace-heading">${escapeHtml(text.workspaceHeading)}</h2>
       <p class="muted" style="margin-top: 8px;">${escapeHtml(text.workspaceCopy)}</p>
       <div class="actions">
-        <button class="primary" data-create-workspace>${escapeHtml(text.createWorkspaceFile)}</button>
-        <button data-command="memobox.openMemoFolder">${escapeHtml(text.openMemoFolder)}</button>
-        <button data-finish-setup>${escapeHtml(text.skipForNow)}</button>
+        <button class="primary" data-testid="setup-create-workspace" data-create-workspace>${escapeHtml(text.createWorkspaceFile)}</button>
+        <button data-testid="setup-open-memo-folder" data-command="memobox.openMemoFolder">${escapeHtml(text.openMemoFolder)}</button>
+        <button data-testid="setup-skip-workspace" data-finish-setup>${escapeHtml(text.skipForNow)}</button>
       </div>
     </div>
     <div class="stack">
-      <section class="info-card">
+      <section class="info-card" data-testid="setup-workspace-file-card">
         <span class="label">${escapeHtml(text.workspaceFile)}</span>
         <span class="value">${escapeHtml(model.workspaceFilePath)}</span>
       </section>
@@ -107,14 +144,14 @@ function renderWorkspaceStep(model: SetupViewModel, ui: MemoBoxUiText): string {
 function renderDoneStep(model: SetupViewModel, ui: MemoBoxUiText): string {
   const text = ui.setup;
   return `
-    <div>
-      <h2>${escapeHtml(text.readyHeading)}</h2>
+    <div data-testid="setup-step-done">
+      <h2 data-testid="setup-done-heading">${escapeHtml(text.readyHeading)}</h2>
       <p class="muted" style="margin-top: 8px;">${escapeHtml(text.readyCopy)}</p>
       <div class="actions">
-        <button class="primary" data-command="memobox.newMemo">${escapeHtml(text.createFirstMemo)}</button>
-        <button data-command="memobox.openAdmin">${escapeHtml(text.openAdmin)}</button>
-        ${model.workspaceFileExists ? `<button data-open-workspace="${escapeHtml(model.workspaceFilePath)}">${escapeHtml(text.openWorkspace)}</button>` : ""}
-        <button data-command="memobox.openMemoFolder">${escapeHtml(text.openMemoFolder)}</button>
+        <button class="primary" data-testid="setup-create-first-memo" data-command="memobox.newMemo">${escapeHtml(text.createFirstMemo)}</button>
+        <button data-testid="setup-open-admin" data-command="memobox.openAdmin">${escapeHtml(text.openAdmin)}</button>
+        ${model.workspaceFileExists ? `<button data-testid="setup-open-workspace" data-open-workspace="${escapeHtml(model.workspaceFilePath)}">${escapeHtml(text.openWorkspace)}</button>` : ""}
+        <button data-testid="setup-open-memo-folder-ready" data-command="memobox.openMemoFolder">${escapeHtml(text.openMemoFolder)}</button>
       </div>
     </div>
     <div class="stack">

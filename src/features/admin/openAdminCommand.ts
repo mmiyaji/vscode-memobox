@@ -10,8 +10,11 @@ import { refreshIndexCommand } from "../commands/refreshIndexCommand";
 import { listTagsCommand } from "../commands/listTagsCommand";
 import { openMemoDocument } from "../commands/openMemoDocument";
 import { openSettingsCommand } from "../commands/openSettingsCommand";
+import { clearIndexCacheCommand } from "../commands/clearIndexCacheCommand";
+import { rebuildIndexCommand } from "../commands/rebuildIndexCommand";
 import { renderAdminHtml } from "./adminHtml";
 import { buildAdminDashboardModel } from "./adminViewModel";
+import { completeMemoBoxSetup } from "../welcome/setupFlow";
 
 const adminViewType = "memobox.admin";
 type AdminMessage =
@@ -20,6 +23,7 @@ type AdminMessage =
   | { readonly type: "revealPath"; readonly path: string }
   | { readonly type: "setDefaultTemplate"; readonly path: string }
   | { readonly type: "clearDefaultTemplate" }
+  | { readonly type: "useRecommendedMemoRoot"; readonly path: string }
   | { readonly type: "pinFile"; readonly path: string }
   | { readonly type: "unpinFile"; readonly path: string };
 
@@ -105,6 +109,10 @@ class MemoAdminPanel {
         await this.clearDefaultTemplate();
         await this.render();
         return;
+      case "useRecommendedMemoRoot":
+        await this.useRecommendedMemoRoot(message.path);
+        await this.render();
+        return;
       case "pinFile":
         await this.pinFile(message.path);
         await this.render();
@@ -144,8 +152,30 @@ class MemoAdminPanel {
       case "memobox.listTags":
       case "memobox.grepMemos":
       case "memobox.todoMemos":
+      case "memobox.aiGenerateTitle":
+      case "memobox.aiSummarize":
+      case "memobox.aiAutoTag":
+      case "memobox.aiProofread":
+      case "memobox.aiTranslate":
+      case "memobox.aiQuestion":
+      case "memobox.aiSuggestTemplate":
+      case "memobox.aiReport":
+      case "memobox.aiLinkSuggest":
+      case "memobox.aiSetApiKey":
+      case "memobox.aiClearApiKey":
       case "memobox.redateMemo":
+      case "memobox.createWorkspace":
+        await vscode.commands.executeCommand(command);
+        return;
       case "memobox.refreshIndex":
+        await refreshIndexCommand();
+        return;
+      case "memobox.rebuildIndex":
+        await rebuildIndexCommand();
+        return;
+      case "memobox.clearIndexCache":
+        await clearIndexCacheCommand();
+        return;
       case "memobox.openMemoFolder":
         await vscode.commands.executeCommand(command);
         return;
@@ -198,6 +228,15 @@ class MemoAdminPanel {
     await vscode.workspace.getConfiguration("memobox").update("memotemplate", "", getMemoBoxConfigurationTarget());
   }
 
+  private async useRecommendedMemoRoot(directoryPath: string): Promise<void> {
+    if (directoryPath.trim() === "") {
+      return;
+    }
+
+    const settings = readSettings();
+    await completeMemoBoxSetup(settings, directoryPath);
+  }
+
   private async pinFile(filePath: string): Promise<void> {
     const settings = readSettings();
     await pinMemoByAbsolutePath(settings, filePath);
@@ -240,6 +279,10 @@ function isAdminMessage(value: unknown): value is AdminMessage {
 
   if (candidate.type === "clearDefaultTemplate") {
     return true;
+  }
+
+  if (candidate.type === "useRecommendedMemoRoot") {
+    return typeof candidate.path === "string";
   }
 
   if (candidate.type === "pinFile" || candidate.type === "unpinFile") {

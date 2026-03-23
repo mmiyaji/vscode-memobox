@@ -17,18 +17,26 @@ export async function findTodoMemos(
   const files = filterEntriesByGrepScope(await getMemoIndexEntries(settings), scope);
   const results: MemoTextMatch[] = [];
   const maxResults = options.maxResults && options.maxResults > 0 ? options.maxResults : Number.POSITIVE_INFINITY;
+  let skippedFiles = 0;
 
   for (const file of files) {
     if (options.isCancellationRequested?.()) {
-      return { matches: results, truncated: false, cancelled: true };
+      return { matches: results, truncated: false, cancelled: true, skippedFiles };
     }
 
-    const content = await readFile(file.absolutePath, "utf8");
+    let content: string;
+    try {
+      content = await readFile(file.absolutePath, "utf8");
+    } catch {
+      skippedFiles += 1;
+      continue;
+    }
+
     const lines = content.split(/\r?\n/u);
 
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       if (options.isCancellationRequested?.()) {
-        return { matches: results, truncated: false, cancelled: true };
+        return { matches: results, truncated: false, cancelled: true, skippedFiles };
       }
 
       const line = lines[lineIndex] ?? "";
@@ -50,12 +58,12 @@ export async function findTodoMemos(
       });
 
       if (results.length >= maxResults) {
-        return { matches: results, truncated: true, cancelled: false };
+        return { matches: results, truncated: true, cancelled: false, skippedFiles };
       }
     }
   }
 
-  return { matches: results, truncated: false, cancelled: false };
+  return { matches: results, truncated: false, cancelled: false, skippedFiles };
 }
 
 export function createTodoRegExp(pattern: string): RegExp {

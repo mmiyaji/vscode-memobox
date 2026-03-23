@@ -41,10 +41,23 @@
     "onCommand:memobox.relatedMemos",
     "onCommand:memobox.redateMemo",
     "onCommand:memobox.refreshIndex",
+    "onCommand:memobox.rebuildIndex",
+    "onCommand:memobox.clearIndexCache",
     "onCommand:memobox.openMemoFolder",
     "onCommand:memobox.openMarkdownInBrowser",
     "onCommand:memobox.openSetup",
-    "onCommand:memobox.openSettings"
+    "onCommand:memobox.openSettings",
+    "onCommand:memobox.aiAutoTag",
+    "onCommand:memobox.aiSummarize",
+    "onCommand:memobox.aiGenerateTitle",
+    "onCommand:memobox.aiProofread",
+    "onCommand:memobox.aiTranslate",
+    "onCommand:memobox.aiQuestion",
+    "onCommand:memobox.aiSuggestTemplate",
+    "onCommand:memobox.aiReport",
+    "onCommand:memobox.aiLinkSuggest",
+    "onCommand:memobox.aiSetApiKey",
+    "onCommand:memobox.aiClearApiKey"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -102,6 +115,14 @@
         "title": "%commands.refreshIndex.title%"
       },
       {
+        "command": "memobox.rebuildIndex",
+        "title": "%commands.rebuildIndex.title%"
+      },
+      {
+        "command": "memobox.clearIndexCache",
+        "title": "%commands.clearIndexCache.title%"
+      },
+      {
         "command": "memobox.openMemoFolder",
         "title": "%commands.openMemoFolder.title%"
       },
@@ -120,6 +141,50 @@
       {
         "command": "memobox.openAdmin",
         "title": "%commands.openAdmin.title%"
+      },
+      {
+        "command": "memobox.aiAutoTag",
+        "title": "%commands.aiAutoTag.title%"
+      },
+      {
+        "command": "memobox.aiSummarize",
+        "title": "%commands.aiSummarize.title%"
+      },
+      {
+        "command": "memobox.aiGenerateTitle",
+        "title": "%commands.aiGenerateTitle.title%"
+      },
+      {
+        "command": "memobox.aiProofread",
+        "title": "%commands.aiProofread.title%"
+      },
+      {
+        "command": "memobox.aiTranslate",
+        "title": "%commands.aiTranslate.title%"
+      },
+      {
+        "command": "memobox.aiQuestion",
+        "title": "%commands.aiQuestion.title%"
+      },
+      {
+        "command": "memobox.aiSuggestTemplate",
+        "title": "%commands.aiSuggestTemplate.title%"
+      },
+      {
+        "command": "memobox.aiReport",
+        "title": "%commands.aiReport.title%"
+      },
+      {
+        "command": "memobox.aiLinkSuggest",
+        "title": "%commands.aiLinkSuggest.title%"
+      },
+      {
+        "command": "memobox.aiSetApiKey",
+        "title": "%commands.aiSetApiKey.title%"
+      },
+      {
+        "command": "memobox.aiClearApiKey",
+        "title": "%commands.aiClearApiKey.title%"
       }
     ],
     "keybindings": [
@@ -188,171 +253,361 @@
           "group": "1_basic@7"
         },
         {
-          "command": "memobox.redateMemo",
-          "group": "2_manage@1"
+          "command": "memobox.aiGenerateTitle",
+          "group": "2_ai@1",
+          "when": "config.memobox.aiEnabled"
         },
         {
-          "command": "memobox.createWorkspace",
-          "group": "2_manage@2"
+          "command": "memobox.aiSummarize",
+          "group": "2_ai@2",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiAutoTag",
+          "group": "2_ai@3",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiProofread",
+          "group": "2_ai@4",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiTranslate",
+          "group": "2_ai@5",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiQuestion",
+          "group": "2_ai@6",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiSuggestTemplate",
+          "group": "2_ai@7",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiReport",
+          "group": "2_ai@8",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiLinkSuggest",
+          "group": "2_ai@9",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.redateMemo",
+          "group": "3_context@1"
         },
         {
           "command": "memobox.openMarkdownInBrowser",
-          "group": "2_manage@3"
+          "group": "3_context@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "memobox.aiAutoTag",
+          "when": "config.memobox.aiEnabled"
         },
         {
-          "command": "memobox.refreshIndex",
-          "group": "2_manage@4"
+          "command": "memobox.aiSummarize",
+          "when": "config.memobox.aiEnabled"
         },
         {
-          "command": "memobox.openAdmin",
-          "group": "2_manage@5"
+          "command": "memobox.aiGenerateTitle",
+          "when": "config.memobox.aiEnabled"
         },
         {
-          "command": "memobox.openSettings",
-          "group": "2_manage@6"
+          "command": "memobox.aiProofread",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiTranslate",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiQuestion",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiSuggestTemplate",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiReport",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiLinkSuggest",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiSetApiKey",
+          "when": "config.memobox.aiEnabled"
+        },
+        {
+          "command": "memobox.aiClearApiKey",
+          "when": "config.memobox.aiEnabled"
         }
       ]
     },
-    "configuration": {
-      "title": "%config.title%",
-      "properties": {
-        "memobox.memodir": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%settings.memodir.description%"
-        },
-        "memobox.datePathFormat": {
-          "type": "string",
-          "default": "yyyy/MM",
-          "markdownDescription": "%settings.datePathFormat.description%"
-        },
-        "memobox.memotemplate": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%settings.memotemplate.description%"
-        },
-        "memobox.metaDir": {
-          "type": "string",
-          "default": ".vscode-memobox",
-          "markdownDescription": "%settings.metaDir.description%"
-        },
-        "memobox.templatesDir": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%settings.templatesDir.description%"
-        },
-        "memobox.snippetsDir": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%settings.snippetsDir.description%"
-        },
-        "memobox.searchMaxResults": {
-          "type": "number",
-          "default": 200,
-          "minimum": 1,
-          "markdownDescription": "%settings.searchMaxResults.description%"
-        },
-        "memobox.relatedMemoLimit": {
-          "type": "number",
-          "default": 12,
-          "minimum": 1,
-          "markdownDescription": "%settings.relatedMemoLimit.description%"
-        },
-        "memobox.titlePrefix": {
-          "type": "string",
-          "default": "## ",
-          "markdownDescription": "%settings.titlePrefix.description%"
-        },
-        "memobox.dateFormat": {
-          "type": "string",
-          "default": "yyyy-MM-dd HH:mm",
-          "markdownDescription": "%settings.dateFormat.description%"
-        },
-        "memobox.memoNewFilenameFromClipboard": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%settings.memoNewFilenameFromClipboard.description%"
-        },
-        "memobox.memoNewFilenameFromSelection": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%settings.memoNewFilenameFromSelection.description%"
-        },
-        "memobox.memoNewFilenameDateSuffix": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "%settings.memoNewFilenameDateSuffix.description%"
-        },
-        "memobox.listSortOrder": {
-          "type": "string",
-          "enum": [
-            "filename",
-            "mtime",
-            "birthtime"
-          ],
-          "default": "filename",
-          "markdownDescription": "%settings.listSortOrder.description%"
-        },
-        "memobox.listDisplayExtname": {
-          "type": "array",
-          "items": {
-            "type": "string"
+    "configuration": [
+      {
+        "title": "%config.paths.title%",
+        "order": 1,
+        "properties": {
+          "memobox.memodir": {
+            "type": "string",
+            "default": "",
+            "order": 10,
+            "markdownDescription": "%settings.memodir.description%"
           },
-          "default": [
-            "md"
-          ],
-          "markdownDescription": "%settings.listDisplayExtname.description%"
-        },
-        "memobox.displayFileBirthTime": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%settings.displayFileBirthTime.description%"
-        },
-        "memobox.openMarkdownPreview": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%settings.openMarkdownPreview.description%"
-        },
-        "memobox.grepViewMode": {
-          "type": "string",
-          "enum": [
-            "quickPick",
-            "outputChannel",
-            "both",
-            "readOnlyDocument",
-            "editableDocument"
-          ],
-          "default": "quickPick",
-          "markdownDescription": "%settings.grepViewMode.description%"
-        },
-        "memobox.todoPattern": {
-          "type": "string",
-          "default": "^.*@todo.*?:",
-          "markdownDescription": "%settings.todoPattern.description%"
-        },
-        "memobox.recentCount": {
-          "type": "number",
-          "default": 8,
-          "minimum": 1,
-          "markdownDescription": "%settings.recentCount.description%"
-        },
-        "memobox.adminOpenOnStartup": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "%settings.adminOpenOnStartup.description%"
-        },
-        "memobox.locale": {
-          "type": "string",
-          "enum": [
-            "auto",
-            "ja",
-            "en"
-          ],
-          "default": "auto",
-          "markdownDescription": "%settings.locale.description%"
+          "memobox.datePathFormat": {
+            "type": "string",
+            "default": "yyyy/MM",
+            "order": 11,
+            "markdownDescription": "%settings.datePathFormat.description%"
+          }
+        }
+      },
+      {
+        "title": "%config.assets.title%",
+        "order": 2,
+        "properties": {
+          "memobox.memotemplate": {
+            "type": "string",
+            "default": "",
+            "order": 20,
+            "markdownDescription": "%settings.memotemplate.description%"
+          },
+          "memobox.metaDir": {
+            "type": "string",
+            "default": ".vscode-memobox",
+            "order": 21,
+            "markdownDescription": "%settings.metaDir.description%"
+          },
+          "memobox.templatesDir": {
+            "type": "string",
+            "default": "",
+            "order": 22,
+            "markdownDescription": "%settings.templatesDir.description%"
+          },
+          "memobox.snippetsDir": {
+            "type": "string",
+            "default": "",
+            "order": 23,
+            "markdownDescription": "%settings.snippetsDir.description%"
+          }
+        }
+      },
+      {
+        "title": "%config.creation.title%",
+        "order": 3,
+        "properties": {
+          "memobox.titlePrefix": {
+            "type": "string",
+            "default": "## ",
+            "order": 30,
+            "markdownDescription": "%settings.titlePrefix.description%"
+          },
+          "memobox.dateFormat": {
+            "type": "string",
+            "default": "yyyy-MM-dd HH:mm",
+            "order": 31,
+            "markdownDescription": "%settings.dateFormat.description%"
+          },
+          "memobox.memoNewFilenameFromClipboard": {
+            "type": "boolean",
+            "default": false,
+            "order": 32,
+            "markdownDescription": "%settings.memoNewFilenameFromClipboard.description%"
+          },
+          "memobox.memoNewFilenameFromSelection": {
+            "type": "boolean",
+            "default": false,
+            "order": 33,
+            "markdownDescription": "%settings.memoNewFilenameFromSelection.description%"
+          },
+          "memobox.memoNewFilenameDateSuffix": {
+            "type": "string",
+            "default": "",
+            "order": 34,
+            "markdownDescription": "%settings.memoNewFilenameDateSuffix.description%"
+          }
+        }
+      },
+      {
+        "title": "%config.browse.title%",
+        "order": 4,
+        "properties": {
+          "memobox.listSortOrder": {
+            "type": "string",
+            "enum": [
+              "filename",
+              "mtime",
+              "birthtime"
+            ],
+            "default": "filename",
+            "order": 40,
+            "markdownDescription": "%settings.listSortOrder.description%"
+          },
+          "memobox.listDisplayExtname": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "md"
+            ],
+            "order": 41,
+            "markdownDescription": "%settings.listDisplayExtname.description%"
+          },
+          "memobox.displayFileBirthTime": {
+            "type": "boolean",
+            "default": false,
+            "order": 42,
+            "markdownDescription": "%settings.displayFileBirthTime.description%"
+          },
+          "memobox.openMarkdownPreview": {
+            "type": "boolean",
+            "default": false,
+            "order": 43,
+            "markdownDescription": "%settings.openMarkdownPreview.description%"
+          }
+        }
+      },
+      {
+        "title": "%config.search.title%",
+        "order": 5,
+        "properties": {
+          "memobox.searchMaxResults": {
+            "type": "number",
+            "default": 200,
+            "minimum": 1,
+            "order": 50,
+            "markdownDescription": "%settings.searchMaxResults.description%"
+          },
+          "memobox.excludeDirectories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "node_modules",
+              "dist",
+              "build",
+              "out",
+              "coverage",
+              "vendor"
+            ],
+            "order": 51,
+            "markdownDescription": "%settings.excludeDirectories.description%"
+          },
+          "memobox.maxScanDepth": {
+            "type": "number",
+            "default": 4,
+            "minimum": 0,
+            "order": 52,
+            "markdownDescription": "%settings.maxScanDepth.description%"
+          },
+          "memobox.grepViewMode": {
+            "type": "string",
+            "enum": [
+              "quickPick",
+              "outputChannel",
+              "both",
+              "readOnlyDocument",
+              "editableDocument"
+            ],
+            "default": "quickPick",
+            "order": 53,
+            "markdownDescription": "%settings.grepViewMode.description%"
+          },
+          "memobox.todoPattern": {
+            "type": "string",
+            "default": "^.*@todo.*?:",
+            "order": 54,
+            "markdownDescription": "%settings.todoPattern.description%"
+          },
+          "memobox.relatedMemoLimit": {
+            "type": "number",
+            "default": 12,
+            "minimum": 1,
+            "order": 55,
+            "markdownDescription": "%settings.relatedMemoLimit.description%"
+          }
+        }
+      },
+      {
+        "title": "%config.admin.title%",
+        "order": 6,
+        "properties": {
+          "memobox.recentCount": {
+            "type": "number",
+            "default": 8,
+            "minimum": 1,
+            "order": 60,
+            "markdownDescription": "%settings.recentCount.description%"
+          },
+          "memobox.adminOpenOnStartup": {
+            "type": "boolean",
+            "default": false,
+            "order": 61,
+            "markdownDescription": "%settings.adminOpenOnStartup.description%"
+          },
+          "memobox.locale": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "ja",
+              "en"
+            ],
+            "default": "auto",
+            "order": 62,
+            "markdownDescription": "%settings.locale.description%"
+          }
+        }
+      },
+      {
+        "title": "%config.ai.title%",
+        "order": 7,
+        "properties": {
+          "memobox.aiEnabled": {
+            "type": "boolean",
+            "default": false,
+            "order": 70,
+            "markdownDescription": "%settings.aiEnabled.description%"
+          },
+          "memobox.ai": {
+            "type": "object",
+            "default": {
+              "defaultProfile": "local",
+              "profiles": {
+                "local": {
+                  "provider": "ollama",
+                  "endpoint": "http://localhost:11434",
+                  "model": "qwen3:1.7b",
+                  "apiKey": "",
+                  "apiKeyEnv": "",
+                  "tagLanguage": "auto",
+                  "timeoutMs": 300000
+                }
+              },
+              "network": {
+                "proxy": "",
+                "proxyBypass": "",
+                "tlsRejectUnauthorized": true,
+                "tlsCaCert": ""
+              }
+            },
+            "order": 71,
+            "markdownDescription": "%settings.ai.description%"
+          }
         }
       }
-    }
+    ]
   },
   "scripts": {
     "build": "node ./scripts/build.mjs",

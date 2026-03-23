@@ -22,11 +22,19 @@ export function renderMemoTemplate(
   template: string,
   values: { date: string; title: string }
 ): string {
+  const titleYaml = toYamlSingleQuotedScalar(values.title);
+
   return template
     .replaceAll("{{.Date}}", values.date)
     .replaceAll("{{date}}", values.date)
+    .replaceAll("{{.TitleYaml}}", titleYaml)
+    .replaceAll("{{titleYaml}}", titleYaml)
     .replaceAll("{{.Title}}", values.title)
     .replaceAll("{{title}}", values.title);
+}
+
+function toYamlSingleQuotedScalar(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
 }
 
 async function readMemoTemplate(templatePath: string): Promise<string> {

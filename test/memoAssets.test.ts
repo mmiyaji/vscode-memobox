@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, normalize } from "node:path";
 import type { MemoBoxSettings } from "../src/core/config/types";
@@ -23,6 +23,8 @@ function createSettings(memodir: string): MemoBoxSettings {
     snippetsDir: "",
     searchMaxResults: 200,
     relatedMemoLimit: 12,
+    excludeDirectories: ["node_modules", "dist", "build", "out", "coverage", "vendor"],
+    maxScanDepth: 8,
     listSortOrder: "filename",
     listDisplayExtname: ["md"],
     displayFileBirthTime: false,
@@ -36,7 +38,28 @@ function createSettings(memodir: string): MemoBoxSettings {
     memoNewFilenameFromClipboard: false,
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
-    locale: "auto"
+    locale: "auto",
+    aiEnabled: false,
+    ai: {
+      defaultProfile: "local",
+      profiles: {
+        local: {
+          provider: "ollama",
+          endpoint: "http://localhost:11434",
+          model: "qwen3:1.7b",
+          apiKey: "",
+          apiKeyEnv: "",
+          tagLanguage: "auto",
+          timeoutMs: 300000
+        }
+      },
+      network: {
+        proxy: "",
+        proxyBypass: "",
+        tlsRejectUnauthorized: true,
+        tlsCaCert: ""
+      }
+    }
   };
 }
 
@@ -57,6 +80,12 @@ test("ensureMemoMetaDirectories creates template and snippet directories", async
       snippets.map((item) => item.name),
       ["memo.json"]
     );
+
+    const simpleTemplate = await readFile(join(memodir, ".vscode-memobox", "templates", "simple.md"), "utf8");
+    const scaffoldSnippets = await readFile(join(memodir, ".vscode-memobox", "snippets", "memo.json"), "utf8");
+
+    assert.match(simpleTemplate, /^---\ntitle: '\{\{title\}\}'\ntags:\n {2}- inbox\ndate: \{\{date\}\}\n---/u);
+    assert.match(scaffoldSnippets, /"title: '\$\{1:Title\}'"/u);
   } finally {
     await rm(memodir, { force: true, recursive: true });
   }

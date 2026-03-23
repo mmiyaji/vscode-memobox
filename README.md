@@ -4,11 +4,11 @@ MemoBox is a VS Code extension for daily memo workflows. This repository is bein
 
 ## Status
 
-- Project state: active rebuild
+- Project state: release hardening for `v0.1.x`
 - Release line: `0.1.x`
 - Migration approach: re-architecture first, feature port second
 
-The current repository intentionally starts from a clean baseline. The initial goal is to establish maintainable project structure, testing, and release hygiene before porting the full feature set.
+The current repository intentionally starts from a clean baseline. The initial goal was to establish maintainable project structure, testing, and release hygiene before porting the full feature set. That baseline is now in place, and the remaining work is focused on stability, packaging, and release readiness.
 
 Commands currently available:
 
@@ -22,13 +22,30 @@ Commands currently available:
 - `MemoBox: Related Memos`
 - `MemoBox: Re:Date`
 - `MemoBox: Refresh Index`
+- `MemoBox: Rebuild Index`
+- `MemoBox: Clear Index Cache`
 - `MemoBox: Open Memo Folder`
 - `MemoBox: Open Markdown In Browser`
 - `MemoBox: Open Setup`
 - `MemoBox: Open Settings`
 - `MemoBox: Open Admin`
+- `MemoBox: AI Generate Title`
+- `MemoBox: AI Summarize`
+- `MemoBox: AI Auto Tag`
+- `MemoBox: AI Proofread`
+- `MemoBox: AI Translate`
+- `MemoBox: AI Question`
+- `MemoBox: AI Suggest Template`
+- `MemoBox: AI Report`
+- `MemoBox: AI Link Suggest`
 
-`MemoBox: New Memo` supports seeded filenames from the current selection or clipboard, optional date suffixes, and template selection from `.vscode-memobox/templates/*.md`. When multiple templates exist, it prompts for a template and still keeps the configured default or built-in template as the fallback option. MemoBox now scaffolds the bundled legacy starter files automatically from [`resources/scaffold`](C:\Users\mail\Documents\git\vscode-memobox\resources\scaffold): `simple.md`, `meeting.md`, and `memo.json`, both for the default meta directories and for workspace-mode `.templates` / `.snippets`. `MemoBox: Grep` supports scoped search, cancellation, result caps, multiple result view modes, and interactive QuickPick preview with match highlighting. `MemoBox: Todo` reuses the same scoped preview flow for regex-based todo extraction. `MemoBox: Browse Tags` aggregates frontmatter `tags` from indexed memos. `MemoBox: Related Memos` uses shared tags, filename/title tokens, folder proximity, and nearby dates to suggest related notes without AI. `MemoBox: Create Workspace` generates a `MemoBox.code-workspace` file for the memo root with `MemoBox` as the workspace name, and reuses the legacy-style `.templates` / `.snippets` workspace paths. `MemoBox: Open Markdown In Browser` renders the active Markdown document to HTML and opens it in your default browser. `MemoBox: Open Setup` is the dedicated first-run and repair flow for global memo-root setup and optional workspace generation. Admin is kept as an operational dashboard for recent files, pinned files, tags, templates, snippets, and index status. Markdown completions can also load from `.vscode-memobox/snippets/*.json`.
+`MemoBox: New Memo` supports seeded filenames from the current selection or clipboard, optional date suffixes, and template selection from `.vscode-memobox/templates/*.md`. When multiple templates exist, it prompts for a template, and cancelling that picker now aborts creation instead of silently falling back. MemoBox scaffolds the bundled starter files automatically from [`resources/scaffold`](C:\Users\mail\Documents\git\vscode-memobox\resources\scaffold): `simple.md`, `meeting.md`, and `memo.json`, both for the default meta directories and for workspace-mode `.templates` / `.snippets`. The default templates now start with YAML frontmatter and include `title`, `tags`, and `date`; `simple.md` always includes a starter `inbox` tag.
+
+`MemoBox: Grep` supports scoped search, cancellation, result caps, multiple result view modes, interactive QuickPick preview with match highlighting, and now skips unreadable files instead of failing the whole run. `MemoBox: Todo` reuses the same scoped preview flow for regex-based todo extraction and the same unreadable-file tolerance. `MemoBox: Refresh Index` reports skipped files during refresh, while `MemoBox: Rebuild Index` clears saved index files before rebuilding and `MemoBox: Clear Index Cache` removes persisted index files without touching memo content.
+
+`MemoBox: Browse Tags` aggregates frontmatter `tags` from indexed memos. `MemoBox: Related Memos` uses shared tags, filename/title tokens, folder proximity, and nearby dates to suggest related notes without AI. `MemoBox: Create Workspace` generates a `MemoBox.code-workspace` file for the memo root with `MemoBox` as the workspace name, and reuses the legacy-style `.templates` / `.snippets` workspace paths. `MemoBox: Open Markdown In Browser` renders the active Markdown document to HTML and opens it in your default browser. `MemoBox: Open Setup` is the dedicated first-run and repair flow for global memo-root setup and optional workspace generation. Admin is kept as an operational dashboard for recent files, pinned files, tags, templates, snippets, and index status. Markdown completions can also load from `.vscode-memobox/snippets/*.json`.
+
+AI is opt-in. `memobox.aiEnabled` is `false` by default, and when it stays off the AI commands are hidden from the command palette and the editor submenu. The structured AI connection settings live under `memobox.ai`, with provider profiles, timeouts, and network options grouped in one JSON object.
 
 Default keybindings are also available:
 
@@ -44,8 +61,23 @@ Default keybindings are also available:
 - List, tag browse, grep, and todo extraction
 - Non-AI related memo discovery
 - Memo admin dashboard with first-run setup
-- Metadata index persistence and manual refresh
-- Optional AI-assisted memo workflows planned later
+- Metadata index persistence, backup recovery, and manual refresh / rebuild / clear operations
+- Workspace-file generation for dedicated memo environments
+- Template and snippet scaffolding from bundled resources
+- Localized command, settings, Admin, and Setup UI
+- Optional AI title, summary, tag, translation, Q&A, report, and link assistance
+
+## Release Readiness
+
+- Unit tests cover pure core modules such as indexing, grep/todo, tags, related memos, templates, snippets, and workspace generation.
+- Playwright E2E covers first-run Setup rendering, Setup completion to workspace creation, Admin pin/unpin, New Memo template selection, Grep/Todo quick-pick flows, settings grouping, and AI command visibility.
+- VSIX packaging excludes docs, tests, scripts, Playwright assets, and source maps through [`.vscodeignore`](C:\Users\mail\Documents\git\vscode-memobox\.vscodeignore).
+
+Current `0.1.x` focus:
+
+- stabilize operational edge cases
+- keep packaging and docs in sync with shipped behavior
+- keep AI features explicitly opt-in and low-friction to disable
 
 ## Repository Structure
 
@@ -87,7 +119,7 @@ On first run, MemoBox opens a dedicated Setup view. It stores `memobox.memodir` 
 
 ## Configuration
 
-The initial scaffold exposes a minimal settings surface:
+The current release candidate exposes this settings surface:
 
 - `memobox.memodir`
 - `memobox.datePathFormat`
@@ -111,8 +143,10 @@ The initial scaffold exposes a minimal settings surface:
 - `memobox.recentCount`
 - `memobox.adminOpenOnStartup`
 - `memobox.locale`
+- `memobox.aiEnabled`
+- `memobox.ai`
 
-These are expected to expand as feature migration progresses.
+This list is expected to stay relatively small through `0.1.x`. Future settings growth should be driven by clear workflow value rather than one-to-one migration of legacy toggles.
 
 MemoBox also reads a small set of legacy setting names while migrating from the previous extension line, including `memoDatePathFormat`, `memoMetaDir`, `memoGrepViewMode`, `memoTodoUserePattern`, `memoNewFilNameDateSuffix`, and `memoDisplayLanguage`.
 
@@ -134,7 +168,7 @@ Playwright E2E:
 - `npm run test:e2e`
 - `npm run test:e2e:headed`
 
-The E2E suite launches the locally installed VS Code desktop app through Playwright's Electron support and currently covers the MemoBox Admin webview, including first-run setup rendering.
+The E2E suite launches the locally installed VS Code desktop app through Playwright's Electron support and currently covers Setup, Admin, New Memo template selection, and Grep/Todo quick-pick flows.
 
 ## License
 

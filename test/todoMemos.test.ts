@@ -16,6 +16,8 @@ function createSettings(memodir: string, todoPattern = "^.*@todo.*?:"): MemoBoxS
     snippetsDir: "",
     searchMaxResults: 200,
     relatedMemoLimit: 12,
+    excludeDirectories: ["node_modules", "dist", "build", "out", "coverage", "vendor"],
+    maxScanDepth: 8,
     listSortOrder: "filename",
     listDisplayExtname: ["md"],
     displayFileBirthTime: false,
@@ -29,7 +31,28 @@ function createSettings(memodir: string, todoPattern = "^.*@todo.*?:"): MemoBoxS
     memoNewFilenameFromClipboard: false,
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
-    locale: "auto"
+    locale: "auto",
+    aiEnabled: false,
+    ai: {
+      defaultProfile: "local",
+      profiles: {
+        local: {
+          provider: "ollama",
+          endpoint: "http://localhost:11434",
+          model: "qwen3:1.7b",
+          apiKey: "",
+          apiKeyEnv: "",
+          tagLanguage: "auto",
+          timeoutMs: 300000
+        }
+      },
+      network: {
+        proxy: "",
+        proxyBypass: "",
+        tlsRejectUnauthorized: true,
+        tlsCaCert: ""
+      }
+    }
   };
 }
 

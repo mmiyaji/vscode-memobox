@@ -1,10 +1,12 @@
 /* eslint-disable no-unused-vars */
 import * as vscode from "vscode";
+import type { MemoRootRiskCode } from "../core/memo/memoRootGuard";
 import type { MemoBoxLocale } from "../core/config/types";
 
 export type MemoBoxUiLanguage = "ja" | "en";
 
 export interface MemoBoxUiText {
+  formatMemoRootRisk(_riskCode: MemoRootRiskCode): string;
   readonly admin: {
     readonly pageTitle: string;
     panelTitle(_version: string): string;
@@ -15,6 +17,8 @@ export interface MemoBoxUiText {
     readonly scopeLabel: string;
     readonly noIndexedFiles: string;
     readonly noPinnedFiles: string;
+    readonly actionGroupDaily: string;
+    readonly actionGroupMaintenance: string;
     readonly actionNewMemo: string;
     readonly actionQuickMemo: string;
     readonly actionListMemos: string;
@@ -23,10 +27,21 @@ export interface MemoBoxUiText {
     readonly actionTodo: string;
     readonly actionOpenFolder: string;
     readonly actionRefreshIndex: string;
+    readonly actionRebuildIndex: string;
+    readonly actionClearIndexCache: string;
+    readonly actionCreateWorkspace: string;
+    readonly actionOpenSetup: string;
+    readonly actionSetAiApiKey: string;
+    readonly actionClearAiApiKey: string;
     readonly actionReloadAdmin: string;
     readonly actionSettings: string;
     readonly warningTitle: string;
     readonly warningCopy: string;
+    readonly warningBroadRootTitle: string;
+    readonly warningBroadRootCopy: string;
+    warningBroadRootReasons(_reasons: string): string;
+    warningBroadRootRecommendation(_path: string): string;
+    readonly warningUseRecommendedPath: string;
     readonly warningOpenSetup: string;
     readonly summaryMemoRoot: string;
     readonly summaryMemoRootReady: string;
@@ -39,6 +54,18 @@ export interface MemoBoxUiText {
     readonly summaryMaintenance: string;
     readonly summaryHealthy: string;
     summaryIssues(_count: number): string;
+    readonly summaryAi: string;
+    readonly summaryAiOff: string;
+    readonly summaryAiConfigured: string;
+    readonly summaryAiNeedsSetup: string;
+    readonly summaryAiDisabledDetail: string;
+    readonly summaryAiNeedsSetupDetail: string;
+    summaryAiKey(_label: string): string;
+    readonly summaryAiKeySettings: string;
+    readonly summaryAiKeySecretStorage: string;
+    readonly summaryAiKeyEnvironment: string;
+    readonly summaryAiKeyMissing: string;
+    readonly summaryAiKeyNotRequired: string;
     readonly recentMemosTitle: string;
     readonly recentMemosSubtitle: string;
     readonly recentMemosMeta: string;
@@ -119,6 +146,14 @@ export interface MemoBoxUiText {
     readonly createThisFolder: string;
     readonly chooseFolder: string;
     readonly openSettings: string;
+    readonly broadRootWarningTitle: string;
+    readonly broadRootWarningCopy: string;
+    broadRootReasons(_reasons: string): string;
+    broadRootRecommendation(_path: string): string;
+    readonly useRecommendedPath: string;
+    readonly broadRootConfirmTitle: string;
+    broadRootConfirmDetail(_path: string): string;
+    readonly broadRootConfirmAction: string;
     readonly suggestedPath: string;
     readonly configuredPath: string;
     readonly storedAs: string;
@@ -159,6 +194,22 @@ export function getMemoBoxUiText(language: MemoBoxUiLanguage): MemoBoxUiText {
 }
 
 const englishText: MemoBoxUiText = {
+  formatMemoRootRisk: (riskCode) => {
+    switch (riskCode) {
+      case "filesystemRoot":
+        return "Drive root";
+      case "home":
+        return "Home";
+      case "documents":
+        return "Documents";
+      case "desktop":
+        return "Desktop";
+      case "downloads":
+        return "Downloads";
+      default:
+        return riskCode;
+    }
+  },
   admin: {
     pageTitle: "MemoBox",
     panelTitle: (version) => `MemoBox ${version}`,
@@ -169,6 +220,8 @@ const englishText: MemoBoxUiText = {
     scopeLabel: "Scope",
     noIndexedFiles: "No memo files are indexed yet.",
     noPinnedFiles: "Pin frequently used memo files from Recent Memos.",
+    actionGroupDaily: "Daily",
+    actionGroupMaintenance: "Maintenance",
     actionNewMemo: "New Memo",
     actionQuickMemo: "Quick Memo",
     actionListMemos: "List/Edit",
@@ -177,10 +230,21 @@ const englishText: MemoBoxUiText = {
     actionTodo: "Todo",
     actionOpenFolder: "Open Folder",
     actionRefreshIndex: "Refresh Index",
+    actionRebuildIndex: "Rebuild Index",
+    actionClearIndexCache: "Clear Index Cache",
+    actionCreateWorkspace: "Create Workspace",
+    actionOpenSetup: "Open Setup",
+    actionSetAiApiKey: "Set AI API Key",
+    actionClearAiApiKey: "Clear Stored AI API Key",
     actionReloadAdmin: "Reload Admin",
     actionSettings: "Settings",
     warningTitle: "Memo root is not ready",
     warningCopy: "Memo commands need a valid memobox.memodir. Open Setup to repair the memo root configuration.",
+    warningBroadRootTitle: "Memo root may be too broad",
+    warningBroadRootCopy: "The configured memo root points to a high-level folder. Prefer a dedicated child folder to avoid scanning unrelated files.",
+    warningBroadRootReasons: (reasons) => `Reasons: ${reasons}`,
+    warningBroadRootRecommendation: (path) => `Recommended: ${path}`,
+    warningUseRecommendedPath: "Use Recommended Path",
     warningOpenSetup: "Open Setup",
     summaryMemoRoot: "Memo Root",
     summaryMemoRootReady: "Ready",
@@ -193,6 +257,18 @@ const englishText: MemoBoxUiText = {
     summaryMaintenance: "Maintenance",
     summaryHealthy: "Healthy",
     summaryIssues: (count) => `${count} issue${count === 1 ? "" : "s"}`,
+    summaryAi: "AI",
+    summaryAiOff: "Off",
+    summaryAiConfigured: "Configured",
+    summaryAiNeedsSetup: "Needs setup",
+    summaryAiDisabledDetail: "Disabled in settings.",
+    summaryAiNeedsSetupDetail: "AI configuration needs attention.",
+    summaryAiKey: (label) => `API key: ${label}`,
+    summaryAiKeySettings: "Settings JSON",
+    summaryAiKeySecretStorage: "SecretStorage",
+    summaryAiKeyEnvironment: "Environment",
+    summaryAiKeyMissing: "Missing",
+    summaryAiKeyNotRequired: "Not required",
     recentMemosTitle: "Recent Memos",
     recentMemosSubtitle: "Latest updated memo files from the current index.",
     recentMemosMeta: "Sorted by updated time. Open a file or pin it for repeated access.",
@@ -273,6 +349,14 @@ const englishText: MemoBoxUiText = {
     createThisFolder: "Create This Folder",
     chooseFolder: "Choose Folder",
     openSettings: "Open Settings",
+    broadRootWarningTitle: "This path looks broader than a typical memo root",
+    broadRootWarningCopy: "Prefer a dedicated child folder such as Documents/MemoBox to reduce accidental scanning of unrelated files.",
+    broadRootReasons: (reasons) => `Reasons: ${reasons}`,
+    broadRootRecommendation: (path) => `Recommended: ${path}`,
+    useRecommendedPath: "Use Recommended Path",
+    broadRootConfirmTitle: "The selected memo root looks too broad.",
+    broadRootConfirmDetail: (path) => `The selected path is ${path}. This may scan unrelated files. Use a dedicated child folder if possible.`,
+    broadRootConfirmAction: "Use Anyway",
     suggestedPath: "Suggested Path",
     configuredPath: "Configured Path",
     storedAs: "Stored As",
@@ -301,6 +385,22 @@ const englishText: MemoBoxUiText = {
 };
 
 const japaneseText: MemoBoxUiText = {
+  formatMemoRootRisk: (riskCode) => {
+    switch (riskCode) {
+      case "filesystemRoot":
+        return "ドライブ直下";
+      case "home":
+        return "ホーム";
+      case "documents":
+        return "Documents";
+      case "desktop":
+        return "Desktop";
+      case "downloads":
+        return "Downloads";
+      default:
+        return riskCode;
+    }
+  },
   admin: {
     pageTitle: "MemoBox",
     panelTitle: (version) => `MemoBox 管理画面 ${version}`,
@@ -311,6 +411,8 @@ const japaneseText: MemoBoxUiText = {
     scopeLabel: "対象",
     noIndexedFiles: "まだインデックス済みのメモはありません。",
     noPinnedFiles: "最近のメモからよく使うメモをピン留めしてください。",
+    actionGroupDaily: "日常操作",
+    actionGroupMaintenance: "メンテナンス",
     actionNewMemo: "新規メモ",
     actionQuickMemo: "クイックメモ",
     actionListMemos: "一覧 / 編集",
@@ -319,10 +421,21 @@ const japaneseText: MemoBoxUiText = {
     actionTodo: "Todo",
     actionOpenFolder: "フォルダを開く",
     actionRefreshIndex: "インデックス更新",
+    actionRebuildIndex: "インデックス再構築",
+    actionClearIndexCache: "インデックスキャッシュ削除",
+    actionCreateWorkspace: "ワークスペース作成",
+    actionOpenSetup: "Setup を開く",
+    actionSetAiApiKey: "AI API キーを保存",
+    actionClearAiApiKey: "保存済み AI API キーを削除",
     actionReloadAdmin: "管理画面を再読み込み",
     actionSettings: "設定",
     warningTitle: "メモルートが未設定です",
     warningCopy: "MemoBox のコマンドを使うには有効な memobox.memodir が必要です。設定を修復するには Setup を開いてください。",
+    warningBroadRootTitle: "メモルートが広すぎる可能性があります",
+    warningBroadRootCopy: "上位フォルダが指定されているため、無関係なファイルまで走査する可能性があります。専用の子フォルダを推奨します。",
+    warningBroadRootReasons: (reasons) => `判定理由: ${reasons}`,
+    warningBroadRootRecommendation: (path) => `推奨パス: ${path}`,
+    warningUseRecommendedPath: "推奨パスを使う",
     warningOpenSetup: "Setup を開く",
     summaryMemoRoot: "メモルート",
     summaryMemoRootReady: "準備完了",
@@ -335,6 +448,18 @@ const japaneseText: MemoBoxUiText = {
     summaryMaintenance: "メンテナンス",
     summaryHealthy: "正常",
     summaryIssues: (count) => `${count} 件の問題`,
+    summaryAi: "AI",
+    summaryAiOff: "オフ",
+    summaryAiConfigured: "設定済み",
+    summaryAiNeedsSetup: "設定要確認",
+    summaryAiDisabledDetail: "設定で無効です。",
+    summaryAiNeedsSetupDetail: "AI の設定を確認してください。",
+    summaryAiKey: (label) => `API キー: ${label}`,
+    summaryAiKeySettings: "設定 JSON",
+    summaryAiKeySecretStorage: "SecretStorage",
+    summaryAiKeyEnvironment: "環境変数",
+    summaryAiKeyMissing: "未設定",
+    summaryAiKeyNotRequired: "不要",
     recentMemosTitle: "最近のメモ",
     recentMemosSubtitle: "現在のインデックスから、更新日時が新しいメモを表示します。",
     recentMemosMeta: "更新日時順に並びます。ファイルを開いたり、ピン留めして再利用できます。",
@@ -415,6 +540,14 @@ const japaneseText: MemoBoxUiText = {
     createThisFolder: "このフォルダを作成",
     chooseFolder: "フォルダを選ぶ",
     openSettings: "設定を開く",
+    broadRootWarningTitle: "このパスはメモルートとして広すぎる可能性があります",
+    broadRootWarningCopy: "Documents/MemoBox のような専用の子フォルダを使うと、無関係なファイルの走査を避けやすくなります。",
+    broadRootReasons: (reasons) => `判定理由: ${reasons}`,
+    broadRootRecommendation: (path) => `推奨パス: ${path}`,
+    useRecommendedPath: "推奨パスを使う",
+    broadRootConfirmTitle: "選択したメモルートは広すぎる可能性があります。",
+    broadRootConfirmDetail: (path) => `選択したパスは ${path} です。無関係なファイルまで走査する可能性があります。可能なら専用の子フォルダを使ってください。`,
+    broadRootConfirmAction: "このまま使う",
     suggestedPath: "推奨パス",
     configuredPath: "設定済みパス",
     storedAs: "保存先",

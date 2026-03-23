@@ -9,51 +9,77 @@ const rootDir = resolve(__dirname, "..", "..");
 async function launchMemoBoxAdminForE2E(options = {}) {
   const tempRoot = await mkdtemp(join(tmpdir(), "memobox-e2e-"));
   const workspaceDir = join(tempRoot, "workspace");
-  const memoDir = join(workspaceDir, "memos");
-  const metaDir = join(memoDir, ".vscode-memobox");
+  const memoDir = options.memoDirPath ?? join(workspaceDir, "memos");
+  const configuredMemoDir = options.withMemoDir === false ? undefined : (options.memoDirSetting ?? memoDir);
+  const seededMemoDir = configuredMemoDir ?? memoDir;
+  const metaDir = join(seededMemoDir, ".vscode-memobox");
   const userDataDir = join(tempRoot, "user-data");
   const extensionsDir = join(tempRoot, "extensions");
   const withMemoDir = options.withMemoDir !== false;
+  const shouldSeedMemoDir = options.seedMemoDir ?? withMemoDir;
+  const memoFiles = options.memoFiles ?? [
+    {
+      relativePath: join("2026", "03", "2026-03-21-plan.md"),
+      content: "---\ntags: [project-x]\n---\n# Plan\n\n- item\n",
+      timestamp: "2026-03-21T01:00:00Z"
+    },
+    {
+      relativePath: join("2026", "03", "2026-03-22-review.md"),
+      content: "---\ntitle: Review\ntags: [project-x, review]\n---\n# Review\n\n- done\n- @todo: follow up\n",
+      timestamp: "2026-03-22T01:00:00Z"
+    }
+  ];
+  const templates = options.templates ?? {
+    "simple.md": "# {{date}} {{title}}\n\n"
+  };
+  const snippets = options.snippets ?? {
+    "markdown.json": JSON.stringify(
+      {
+        note: {
+          prefix: "memo-note",
+          body: "## ${1:Title}",
+          description: "Insert memo heading"
+        }
+      },
+      null,
+      2
+    )
+  };
 
   await mkdir(join(workspaceDir, ".vscode"), { recursive: true });
-  if (withMemoDir) {
-    await mkdir(join(memoDir, "2026", "03"), { recursive: true });
+  if (shouldSeedMemoDir) {
+    await mkdir(join(seededMemoDir, "2026", "03"), { recursive: true });
     await mkdir(join(metaDir, "templates"), { recursive: true });
     await mkdir(join(metaDir, "snippets"), { recursive: true });
 
-    const olderMemoPath = join(memoDir, "2026", "03", "2026-03-21-plan.md");
-    const newerMemoPath = join(memoDir, "2026", "03", "2026-03-22-review.md");
-    await writeFile(olderMemoPath, "---\ntags: [project-x]\n---\n# Plan\n\n- item\n", "utf8");
-    await writeFile(newerMemoPath, "---\ntitle: Review\ntags: [project-x, review]\n---\n# Review\n\n- done\n", "utf8");
-    await utimes(olderMemoPath, new Date("2026-03-21T01:00:00Z"), new Date("2026-03-21T01:00:00Z"));
-    await utimes(newerMemoPath, new Date("2026-03-22T01:00:00Z"), new Date("2026-03-22T01:00:00Z"));
+    for (const memoFile of memoFiles) {
+      const memoPath = join(seededMemoDir, memoFile.relativePath);
+      await mkdir(dirname(memoPath), { recursive: true });
+      await writeFile(memoPath, memoFile.content, "utf8");
+      if (memoFile.timestamp) {
+        await utimes(memoPath, new Date(memoFile.timestamp), new Date(memoFile.timestamp));
+      }
+    }
 
-    await writeFile(join(metaDir, "templates", "simple.md"), "# {{date}} {{title}}\n\n", "utf8");
-    await writeFile(
-      join(metaDir, "snippets", "markdown.json"),
-      JSON.stringify(
-        {
-          note: {
-            prefix: "memo-note",
-            body: "## ${1:Title}",
-            description: "Insert memo heading"
-          }
-        },
-        null,
-        2
-      ),
-      "utf8"
-    );
+    for (const [fileName, content] of Object.entries(templates)) {
+      await writeFile(join(metaDir, "templates", fileName), content, "utf8");
+    }
+
+    for (const [fileName, content] of Object.entries(snippets)) {
+      await writeFile(join(metaDir, "snippets", fileName), content, "utf8");
+    }
   }
 
   await writeFile(
     join(workspaceDir, ".vscode", "settings.json"),
     JSON.stringify(
       {
-        ...(withMemoDir ? { "memobox.memodir": memoDir } : {}),
+        ...(configuredMemoDir ? { "memobox.memodir": configuredMemoDir } : {}),
         "memobox.recentCount": 2,
-        "memobox.adminOpenOnStartup": withMemoDir,
+        "memobox.adminOpenOnStartup": options.adminOpenOnStartup ?? withMemoDir,
         "memobox.locale": "en"
+        ,
+        ...(options.settings ?? {})
       },
       null,
       2
@@ -80,7 +106,8 @@ async function launchMemoBoxAdminForE2E(options = {}) {
     app,
     window,
     workspaceDir,
-    memoDir,
+    memoDir: seededMemoDir,
+    configuredMemoDir,
     async dispose() {
       await app.close();
       await rm(tempRoot, { force: true, recursive: true });
@@ -126,6 +153,59 @@ async function waitForSetupFrame(window, timeoutMs = 30_000) {
   return await waitForWebviewFrame(window, "setup-root", timeoutMs);
 }
 
+async function waitForSetupStep(window, stepTestId, timeoutMs = 30_000) {
+  return await waitForWebviewFrame(window, stepTestId, timeoutMs);
+}
+
+async function focusWorkbench(window) {
+  await window.locator(".monaco-workbench").click({
+    position: { x: 320, y: 120 }
+  });
+}
+
+async function openSettingsUi(window) {
+  await focusWorkbench(window);
+  await window.keyboard.press("Control+,");
+}
+
+async function openCommandPalette(window) {
+  await focusWorkbench(window);
+  await window.keyboard.press("F1");
+  const input = window.locator(".quick-input-widget input").last();
+  await input.waitFor({ state: "visible", timeout: 30_000 });
+  return input;
+}
+
+async function runCommand(window, commandTitle) {
+  const input = await openCommandPalette(window);
+  await input.fill(commandTitle);
+  await window.waitForTimeout(400);
+  await input.press("Enter");
+}
+
+async function waitForQuickInput(window) {
+  const input = window.locator(".quick-input-widget input").last();
+  await input.waitFor({ state: "visible", timeout: 30_000 });
+  return input;
+}
+
+async function acceptQuickPick(window) {
+  const input = await waitForQuickInput(window);
+  await input.press("Enter");
+}
+
+async function fillQuickInput(window, value) {
+  const input = await waitForQuickInput(window);
+  await input.fill(value);
+  return input;
+}
+
+async function pickQuickInputItem(window, text) {
+  const item = window.locator(".quick-input-widget .monaco-list-row").filter({ hasText: text }).first();
+  await item.waitFor({ state: "visible", timeout: 30_000 });
+  await item.click();
+}
+
 function resolveCodeExecutablePath() {
   if (process.env.CODE_EXECUTABLE && process.env.CODE_EXECUTABLE.trim() !== "") {
     return process.env.CODE_EXECUTABLE;
@@ -152,7 +232,15 @@ function resolveCodeExecutablePath() {
 }
 
 module.exports = {
+  acceptQuickPick,
+  fillQuickInput,
   launchMemoBoxAdminForE2E,
+  openSettingsUi,
+  openCommandPalette,
+  pickQuickInputItem,
+  runCommand,
   waitForAdminFrame,
-  waitForSetupFrame
+  waitForQuickInput,
+  waitForSetupFrame,
+  waitForSetupStep
 };

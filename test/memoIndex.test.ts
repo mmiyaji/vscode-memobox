@@ -1,10 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rename, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MemoBoxSettings } from "../src/core/config/types";
-import { clearMemoIndexCache, getIndexFilePath, getMemoIndexEntries } from "../src/core/index/memoIndex";
+import {
+  clearMemoIndexCache,
+  clearMemoIndexStorage,
+  getIndexBackupFilePath,
+  getIndexFilePath,
+  getMemoIndexEntries,
+  getMemoIndexStorageState
+} from "../src/core/index/memoIndex";
+import { getTransientBackupFilePath } from "../src/shared/safeWrite";
 
 function createSettings(memodir: string): MemoBoxSettings {
   return {
@@ -16,6 +24,8 @@ function createSettings(memodir: string): MemoBoxSettings {
     snippetsDir: "",
     searchMaxResults: 200,
     relatedMemoLimit: 12,
+    excludeDirectories: ["node_modules", "dist", "build", "out", "coverage", "vendor"],
+    maxScanDepth: 8,
     listSortOrder: "filename",
     listDisplayExtname: ["md"],
     displayFileBirthTime: false,
@@ -29,7 +39,28 @@ function createSettings(memodir: string): MemoBoxSettings {
     memoNewFilenameFromClipboard: false,
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
-    locale: "auto"
+    locale: "auto",
+    aiEnabled: false,
+    ai: {
+      defaultProfile: "local",
+      profiles: {
+        local: {
+          provider: "ollama",
+          endpoint: "http://localhost:11434",
+          model: "qwen3:1.7b",
+          apiKey: "",
+          apiKeyEnv: "",
+          tagLanguage: "auto",
+          timeoutMs: 300000
+        }
+      },
+      network: {
+        proxy: "",
+        proxyBypass: "",
+        tlsRejectUnauthorized: true,
+        tlsCaCert: ""
+      }
+    }
   };
 }
 
@@ -72,6 +103,97 @@ test("memo index refreshes changed files and removes deleted files", async () =>
     const thirdEntries = await getMemoIndexEntries(createSettings(memodir));
     assert.equal(thirdEntries.length, 1);
     assert.equal(thirdEntries[0]?.relativePath.endsWith("note.md"), true);
+  } finally {
+    clearMemoIndexCache();
+    await rm(memodir, { force: true, recursive: true });
+  }
+});
+
+test("memo index falls back to backup files and rewrites the primary index", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-index-recover-"));
+  clearMemoIndexCache();
+
+  try {
+    await mkdir(join(memodir, "2026", "03"), { recursive: true });
+    const memoPath = join(memodir, "2026", "03", "note.md");
+    const settings = createSettings(memodir);
+
+    await writeFile(memoPath, "---\ntitle: Recovered\ntags: [alpha]\n---\n\nBody", "utf8");
+    await getMemoIndexEntries(settings);
+
+    await writeFile(getIndexFilePath(settings), "{broken", "utf8");
+
+    clearMemoIndexCache();
+    const recoveredFromBackup = await getMemoIndexEntries(settings);
+    assert.equal(recoveredFromBackup.length, 1);
+    assert.equal(recoveredFromBackup[0]?.title, "Recovered");
+    const backupState = await getMemoIndexStorageState(settings);
+    assert.equal(backupState.loadSource, "backup");
+
+    await writeFile(getIndexFilePath(settings), "{broken-again", "utf8");
+    await rename(getIndexBackupFilePath(settings), getTransientBackupFilePath(getIndexFilePath(settings)));
+
+    clearMemoIndexCache();
+    const recoveredFromTransient = await getMemoIndexEntries(settings);
+    assert.equal(recoveredFromTransient.length, 1);
+    const transientState = await getMemoIndexStorageState(settings);
+    assert.equal(transientState.loadSource, "transient");
+
+    const repairedPrimary = JSON.parse(await readFile(getIndexFilePath(settings), "utf8")) as { version: number };
+    assert.equal(repairedPrimary.version, 2);
+  } finally {
+    clearMemoIndexCache();
+    await rm(memodir, { force: true, recursive: true });
+  }
+});
+
+test("clearMemoIndexStorage removes primary and backup index files", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-index-clear-"));
+  clearMemoIndexCache();
+
+  try {
+    await mkdir(join(memodir, "2026", "03"), { recursive: true });
+    const memoPath = join(memodir, "2026", "03", "note.md");
+    const settings = createSettings(memodir);
+
+    await writeFile(memoPath, "# note", "utf8");
+    await getMemoIndexEntries(settings);
+
+    const removedFiles = await clearMemoIndexStorage(settings);
+    assert.equal(removedFiles >= 2, true);
+
+    const storageState = await getMemoIndexStorageState(settings);
+    assert.equal(storageState.primaryExists, false);
+    assert.equal(storageState.backupExists, false);
+    assert.equal(storageState.transientBackupExists, false);
+  } finally {
+    clearMemoIndexCache();
+    await rm(memodir, { force: true, recursive: true });
+  }
+});
+
+test("memo index respects excluded directories and max scan depth", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-index-scan-"));
+  clearMemoIndexCache();
+
+  try {
+    await mkdir(join(memodir, "allowed", "level1"), { recursive: true });
+    await mkdir(join(memodir, "allowed", "level1", "level2"), { recursive: true });
+    await mkdir(join(memodir, "node_modules"), { recursive: true });
+    await writeFile(join(memodir, "allowed", "level1", "note.md"), "# include", "utf8");
+    await writeFile(join(memodir, "allowed", "level1", "level2", "deep.md"), "# too deep", "utf8");
+    await writeFile(join(memodir, "node_modules", "skip.md"), "# skip", "utf8");
+
+    const entries = await getMemoIndexEntries({
+      ...createSettings(memodir),
+      maxScanDepth: 2,
+      excludeDirectories: ["node_modules"]
+    });
+
+    assert.deepEqual(
+      entries.map((entry) => entry.relativePath).sort(),
+      ["allowed/level1/note.md"]
+    );
   } finally {
     clearMemoIndexCache();
     await rm(memodir, { force: true, recursive: true });

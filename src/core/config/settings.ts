@@ -2,10 +2,13 @@ import * as vscode from "vscode";
 import type { MemoBoxSettings } from "./types";
 import {
   configurationSection,
+  defaultAiSettings,
   defaultDatePathFormat,
+  defaultExcludeDirectories,
   defaultGrepViewMode,
   defaultListDisplayExtname,
   defaultListSortOrder,
+  defaultMaxScanDepth,
   defaultMetaDir,
   defaultQuickMemoDateFormat,
   defaultQuickMemoTitlePrefix,
@@ -13,6 +16,7 @@ import {
   defaultSearchMaxResults,
   defaultTodoPattern
 } from "./constants";
+import { buildLegacyMemoBoxAiSettings, normalizeMemoBoxAiSettings } from "../../infra/ai/configuration";
 
 export function readSettings(): MemoBoxSettings {
   const config = vscode.workspace.getConfiguration(configurationSection);
@@ -26,6 +30,11 @@ export function readSettings(): MemoBoxSettings {
     snippetsDir: readCompatibleStringSetting(config, "snippetsDir", "", ["memoSnippetsDir"]).trim(),
     searchMaxResults: normalizePositiveCount(readCompatibleSetting(config, "searchMaxResults", defaultSearchMaxResults), defaultSearchMaxResults),
     relatedMemoLimit: normalizePositiveCount(readCompatibleSetting(config, "relatedMemoLimit", defaultRelatedMemoLimit), defaultRelatedMemoLimit),
+    excludeDirectories: readDirectoryNameList(
+      readCompatibleSetting(config, "excludeDirectories", [...defaultExcludeDirectories]),
+      defaultExcludeDirectories
+    ),
+    maxScanDepth: normalizeScanDepth(readCompatibleSetting(config, "maxScanDepth", defaultMaxScanDepth)),
     listSortOrder: readCompatibleSetting(config, "listSortOrder", defaultListSortOrder),
     listDisplayExtname: readListDisplayExtname(readCompatibleSetting(config, "listDisplayExtname", [...defaultListDisplayExtname])),
     displayFileBirthTime: readCompatibleSetting(config, "displayFileBirthTime", false),
@@ -44,7 +53,9 @@ export function readSettings(): MemoBoxSettings {
       "",
       ["memoNewFilNameDateSuffix"]
     ).trim(),
-    locale: readCompatibleSetting(config, "locale", "auto", ["memoDisplayLanguage"])
+    locale: readCompatibleSetting(config, "locale", "auto", ["memoDisplayLanguage"]),
+    aiEnabled: readCompatibleSetting(config, "aiEnabled", false),
+    ai: readAiSettings(config)
   };
 }
 
@@ -97,4 +108,36 @@ function readListDisplayExtname(value: readonly string[]): readonly string[] {
     .filter((extension) => extension !== "");
 
   return normalized.length > 0 ? normalized : [...defaultListDisplayExtname];
+}
+
+function readDirectoryNameList(value: readonly string[], fallback: readonly string[]): readonly string[] {
+  const normalized = value
+    .map((directoryName) => directoryName.trim().replace(/[\\/]+/g, ""))
+    .filter((directoryName) => directoryName !== "")
+    .map((directoryName) => directoryName.toLowerCase());
+
+  return normalized.length > 0 ? [...new Set(normalized)] : [...fallback];
+}
+
+function normalizeScanDepth(value: number): number {
+  return Number.isFinite(value) && value >= 0 ? Math.floor(value) : defaultMaxScanDepth;
+}
+
+function readAiSettings(config: vscode.WorkspaceConfiguration) {
+  const rawAiSettings = readConfiguredValue<unknown>(config, "ai") ?? config.get<unknown>("ai");
+  if (rawAiSettings !== undefined) {
+    return normalizeMemoBoxAiSettings(rawAiSettings, defaultAiSettings);
+  }
+
+  return buildLegacyMemoBoxAiSettings({
+    provider: readConfiguredValue(config, "aiProvider") ?? config.get("aiProvider"),
+    endpoint: readConfiguredValue(config, "aiEndpoint") ?? config.get("aiEndpoint"),
+    model: readConfiguredValue(config, "aiModel") ?? config.get("aiModel"),
+    apiKey: readConfiguredValue(config, "aiApiKey") ?? config.get("aiApiKey"),
+    tagLanguage: readConfiguredValue(config, "aiTagLanguage") ?? config.get("aiTagLanguage"),
+    proxy: readConfiguredValue(config, "aiProxy") ?? config.get("aiProxy"),
+    proxyBypass: readConfiguredValue(config, "aiProxyBypass") ?? config.get("aiProxyBypass"),
+    tlsRejectUnauthorized: readConfiguredValue(config, "aiTlsRejectUnauthorized") ?? config.get("aiTlsRejectUnauthorized"),
+    tlsCaCert: readConfiguredValue(config, "aiTlsCaCert") ?? config.get("aiTlsCaCert")
+  });
 }

@@ -1,7 +1,7 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir, rm, stat } from "node:fs/promises";
 import { basename, extname, join, normalize, relative } from "node:path";
 import type { MemoBoxSettings } from "../config/types";
-import { writeFileSafely } from "../../shared/safeWrite";
+import { getPersistentBackupFilePath, getTransientBackupFilePath, writeFileSafely } from "../../shared/safeWrite";
 import { extractMemoFrontmatterMetadata } from "../memo/frontmatter";
 
 export interface MemoIndexedEntry {
@@ -35,7 +35,29 @@ type PersistedIndexEntry = {
   readonly tags?: readonly string[];
 };
 
+export interface MemoIndexRefreshReport {
+  readonly entries: readonly MemoIndexedEntry[];
+  readonly scannedFiles: number;
+  readonly skippedFiles: number;
+}
+
+export type MemoIndexLoadSource = "primary" | "backup" | "transient" | "none";
+
+export interface MemoIndexStorageState {
+  readonly primaryPath: string;
+  readonly backupPath: string;
+  readonly transientBackupPath: string;
+  readonly primaryExists: boolean;
+  readonly backupExists: boolean;
+  readonly transientBackupExists: boolean;
+  readonly loadSource: MemoIndexLoadSource;
+}
+
 export async function getMemoIndexEntries(settings: MemoBoxSettings): Promise<readonly MemoIndexedEntry[]> {
+  return (await getMemoIndexReport(settings)).entries;
+}
+
+export async function getMemoIndexReport(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
   const cacheKey = buildCacheKey(settings);
   let index = memoIndexCache.get(cacheKey);
 
@@ -48,19 +70,67 @@ export async function getMemoIndexEntries(settings: MemoBoxSettings): Promise<re
 }
 
 export async function refreshMemoIndex(settings: MemoBoxSettings): Promise<readonly MemoIndexedEntry[]> {
+  return (await refreshMemoIndexReport(settings)).entries;
+}
+
+export async function refreshMemoIndexReport(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
   memoIndexCache.delete(buildCacheKey(settings));
-  return await getMemoIndexEntries(settings);
+  return await getMemoIndexReport(settings);
 }
 
 export function clearMemoIndexCache(): void {
   memoIndexCache.clear();
 }
 
+export async function clearMemoIndexStorage(settings: MemoBoxSettings): Promise<number> {
+  clearMemoIndexCache();
+
+  const candidatePaths = [
+    getIndexFilePath(settings),
+    getIndexBackupFilePath(settings),
+    getTransientBackupFilePath(getIndexFilePath(settings))
+  ];
+
+  let removedFiles = 0;
+  for (const candidatePath of candidatePaths) {
+    const existed = await isExistingFile(candidatePath);
+    try {
+      await rm(candidatePath, { force: true });
+      if (existed) {
+        removedFiles += 1;
+      }
+    } catch {
+      // Ignore and let callers decide whether to continue with a rebuild.
+    }
+  }
+
+  return removedFiles;
+}
+
+export async function getMemoIndexStorageState(settings: MemoBoxSettings): Promise<MemoIndexStorageState> {
+  const primaryPath = getIndexFilePath(settings);
+  const backupPath = getIndexBackupFilePath(settings);
+  const transientBackupPath = getTransientBackupFilePath(primaryPath);
+  const cachedIndex = memoIndexCache.get(buildCacheKey(settings));
+
+  return {
+    primaryPath,
+    backupPath,
+    transientBackupPath,
+    primaryExists: await isExistingFile(primaryPath),
+    backupExists: await isExistingFile(backupPath),
+    transientBackupExists: await isExistingFile(transientBackupPath),
+    loadSource: cachedIndex ? cachedIndex.getLastLoadSource() : await inferMemoIndexLoadSource(settings)
+  };
+}
+
 class MemoIndex {
   private readonly entries = new Map<string, MemoIndexedEntrySnapshot>();
   private loadedFromDisk = false;
+  private needsRecoverySave = false;
+  private lastLoadSource: MemoIndexLoadSource = "none";
 
-  async refresh(settings: MemoBoxSettings): Promise<readonly MemoIndexedEntry[]> {
+  async refresh(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
     if (!this.loadedFromDisk) {
       await this.load(settings);
     }
@@ -68,9 +138,18 @@ class MemoIndex {
     const absolutePaths = await collectMemoFiles(settings.memodir, settings);
     const nextEntries = new Map<string, MemoIndexedEntrySnapshot>();
     let changed = false;
+    let skippedFiles = 0;
 
     for (const absolutePath of absolutePaths) {
-      const fileStat = await stat(absolutePath);
+      let fileStat;
+      try {
+        fileStat = await stat(absolutePath);
+      } catch {
+        changed = true;
+        skippedFiles += 1;
+        continue;
+      }
+
       const relativePath = normalizeRelativePath(settings.memodir, absolutePath);
       const existing = this.entries.get(relativePath);
 
@@ -80,7 +159,14 @@ class MemoIndex {
       }
 
       changed = true;
-      const metadata = extractMemoFrontmatterMetadata(await readFile(absolutePath, "utf8"));
+      let metadata;
+      try {
+        metadata = extractMemoFrontmatterMetadata(await readFile(absolutePath, "utf8"));
+      } catch {
+        skippedFiles += 1;
+        continue;
+      }
+
       nextEntries.set(relativePath, {
         absolutePath,
         relativePath,
@@ -109,50 +195,51 @@ class MemoIndex {
       this.entries.set(relativePath, entry);
     }
 
-    if (changed) {
+    if (changed || this.needsRecoverySave) {
       await this.save(settings);
     }
 
-    return Array.from(this.entries.values());
+    return {
+      entries: Array.from(this.entries.values()),
+      scannedFiles: absolutePaths.length,
+      skippedFiles
+    };
   }
 
   private async load(settings: MemoBoxSettings): Promise<void> {
     this.loadedFromDisk = true;
+    const recovered = await readPersistedIndexData(settings);
+    if (!recovered) {
+      this.lastLoadSource = "none";
+      return;
+    }
 
-    try {
-      const raw = await readFile(getIndexFilePath(settings), "utf8");
-      const parsed = JSON.parse(raw) as PersistedIndexData;
+    this.needsRecoverySave = recovered.sourcePath !== getIndexFilePath(settings);
+    this.lastLoadSource = recovered.sourceKind;
 
-      if (![1, 2].includes(parsed.version) || parsed.memodir !== normalize(settings.memodir) || !Array.isArray(parsed.entries)) {
-        return;
+    for (const entry of recovered.data.entries) {
+      if (
+        typeof entry.relativePath !== "string" ||
+        typeof entry.birthtimeMs !== "number" ||
+        typeof entry.mtimeMs !== "number" ||
+        typeof entry.size !== "number"
+      ) {
+        continue;
       }
 
-      for (const entry of parsed.entries) {
-        if (
-          typeof entry.relativePath !== "string" ||
-          typeof entry.birthtimeMs !== "number" ||
-          typeof entry.mtimeMs !== "number" ||
-          typeof entry.size !== "number"
-        ) {
-          continue;
-        }
-
-        const absolutePath = normalize(join(settings.memodir, entry.relativePath));
-        this.entries.set(entry.relativePath, {
-          absolutePath,
-          relativePath: entry.relativePath,
-          birthtime: new Date(entry.birthtimeMs),
-          mtime: new Date(entry.mtimeMs),
-          mtimeMs: entry.mtimeMs,
-          size: entry.size,
-          title: typeof entry.title === "string" && entry.title.trim() !== "" ? entry.title.trim() : undefined,
-          tags: Array.isArray(entry.tags)
-            ? entry.tags.filter((tag: unknown): tag is string => typeof tag === "string" && tag.trim() !== "")
-            : []
-        });
-      }
-    } catch {
-      // Ignore missing or invalid persisted indexes and rebuild from disk.
+      const absolutePath = normalize(join(settings.memodir, entry.relativePath));
+      this.entries.set(entry.relativePath, {
+        absolutePath,
+        relativePath: entry.relativePath,
+        birthtime: new Date(entry.birthtimeMs),
+        mtime: new Date(entry.mtimeMs),
+        mtimeMs: entry.mtimeMs,
+        size: entry.size,
+        title: typeof entry.title === "string" && entry.title.trim() !== "" ? entry.title.trim() : undefined,
+        tags: Array.isArray(entry.tags)
+          ? entry.tags.filter((tag: unknown): tag is string => typeof tag === "string" && tag.trim() !== "")
+          : []
+      });
     }
   }
 
@@ -170,23 +257,44 @@ class MemoIndex {
       }))
     };
 
-    await writeFileSafely(getIndexFilePath(settings), JSON.stringify(data, null, 2));
+    const json = JSON.stringify(data, null, 2);
+    await writeFileSafely(getIndexFilePath(settings), json);
+    await writeFileSafely(getIndexBackupFilePath(settings), json);
+    this.needsRecoverySave = false;
+  }
+
+  getLastLoadSource(): MemoIndexLoadSource {
+    return this.lastLoadSource;
   }
 }
 
 async function collectMemoFiles(directory: string, settings: MemoBoxSettings): Promise<string[]> {
-  const entries = await readdir(directory, { withFileTypes: true });
+  return await collectMemoFilesAtDepth(directory, settings, 0);
+}
+
+async function collectMemoFilesAtDepth(directory: string, settings: MemoBoxSettings, currentDepth: number): Promise<string[]> {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
   const collected: string[] = [];
 
   for (const entry of entries) {
     const absolutePath = normalize(join(directory, entry.name));
 
     if (entry.isDirectory()) {
-      if (shouldSkipDirectory(entry.name, settings)) {
+      if (entry.isSymbolicLink() || shouldSkipDirectory(entry.name, settings)) {
         continue;
       }
 
-      collected.push(...await collectMemoFiles(absolutePath, settings));
+      if (currentDepth >= settings.maxScanDepth) {
+        continue;
+      }
+
+      collected.push(...await collectMemoFilesAtDepth(absolutePath, settings, currentDepth + 1));
       continue;
     }
 
@@ -199,7 +307,10 @@ async function collectMemoFiles(directory: string, settings: MemoBoxSettings): P
 }
 
 function shouldSkipDirectory(name: string, settings: MemoBoxSettings): boolean {
-  return name === settings.metaDir || name.startsWith(".");
+  const normalizedName = name.trim().toLowerCase();
+  return normalizedName === settings.metaDir.toLowerCase()
+    || normalizedName.startsWith(".")
+    || settings.excludeDirectories.includes(normalizedName);
 }
 
 function shouldIncludeFile(name: string, settings: MemoBoxSettings): boolean {
@@ -225,4 +336,54 @@ export function buildMemoListLabel(relativePath: string): string {
 
 export function getIndexFilePath(settings: MemoBoxSettings): string {
   return normalize(join(settings.memodir, settings.metaDir, "index.json"));
+}
+
+export function getIndexBackupFilePath(settings: MemoBoxSettings): string {
+  return getPersistentBackupFilePath(getIndexFilePath(settings));
+}
+
+async function readPersistedIndexData(
+  settings: MemoBoxSettings
+): Promise<{ readonly data: PersistedIndexData; readonly sourcePath: string; readonly sourceKind: MemoIndexLoadSource } | undefined> {
+  const primaryPath = getIndexFilePath(settings);
+  const candidatePaths: readonly { path: string; sourceKind: MemoIndexLoadSource }[] = [
+    { path: primaryPath, sourceKind: "primary" },
+    { path: getIndexBackupFilePath(settings), sourceKind: "backup" },
+    { path: getTransientBackupFilePath(primaryPath), sourceKind: "transient" }
+  ];
+
+  for (const candidate of candidatePaths) {
+    try {
+      const raw = await readFile(candidate.path, "utf8");
+      const parsed = JSON.parse(raw) as PersistedIndexData;
+
+      if (![1, 2].includes(parsed.version) || parsed.memodir !== normalize(settings.memodir) || !Array.isArray(parsed.entries)) {
+        continue;
+      }
+
+      return {
+        data: parsed,
+        sourcePath: candidate.path,
+        sourceKind: candidate.sourceKind
+      };
+    } catch {
+      // Try the next recovery source.
+    }
+  }
+
+  return undefined;
+}
+
+async function inferMemoIndexLoadSource(settings: MemoBoxSettings): Promise<MemoIndexLoadSource> {
+  const recovered = await readPersistedIndexData(settings);
+  return recovered?.sourceKind ?? "none";
+}
+
+async function isExistingFile(filePath: string): Promise<boolean> {
+  try {
+    const info = await stat(filePath);
+    return info.isFile();
+  } catch {
+    return false;
+  }
 }

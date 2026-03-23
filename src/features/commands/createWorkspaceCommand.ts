@@ -4,7 +4,12 @@ import { readSettings } from "../../core/config/settings";
 import { writeMemoWorkspaceFile, getDefaultWorkspaceName, getMemoWorkspaceFilePath } from "../../core/meta/memoWorkspace";
 import { ensureMemoRoot } from "../../core/memo/workspace";
 
-export async function createWorkspaceCommand(options: { readonly openAfterCreate?: boolean } = {}): Promise<string | undefined> {
+export async function createWorkspaceCommand(
+  options: {
+    readonly openAfterCreate?: boolean;
+    readonly quiet?: boolean;
+  } = {}
+): Promise<string | undefined> {
   const settings = readSettings();
   const memoRoot = await ensureMemoRoot(settings);
 
@@ -20,6 +25,10 @@ export async function createWorkspaceCommand(options: { readonly openAfterCreate
 
   if (options.openAfterCreate) {
     await openWorkspaceFile(workspaceFilePath);
+    return workspaceFilePath;
+  }
+
+  if (options.quiet) {
     return workspaceFilePath;
   }
 

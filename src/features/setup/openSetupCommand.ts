@@ -127,11 +127,11 @@ class MemoSetupPanel {
 
     this.currentStep = "workspace";
     const ui = getMemoBoxUiText(resolveUiLanguage(settings.locale));
-    await vscode.window.showInformationMessage(ui.setup.memoRootReadyMessage(memoRoot));
+    void vscode.window.showInformationMessage(ui.setup.memoRootReadyMessage(memoRoot));
   }
 
   private async createWorkspaceFile(): Promise<void> {
-    const workspaceFilePath = await createWorkspaceCommand();
+    const workspaceFilePath = await createWorkspaceCommand({ quiet: true });
     if (!workspaceFilePath) {
       return;
     }

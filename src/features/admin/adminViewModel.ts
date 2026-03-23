@@ -2,7 +2,14 @@ import { stat } from "node:fs/promises";
 import { dirname } from "node:path";
 import { format } from "date-fns";
 import type { MemoBoxSettings } from "../../core/config/types";
-import { getIndexFilePath, getMemoIndexEntries, type MemoIndexedEntry } from "../../core/index/memoIndex";
+import {
+  getIndexFilePath,
+  getMemoIndexEntries,
+  getMemoIndexStorageState,
+  type MemoIndexLoadSource,
+  type MemoIndexedEntry
+} from "../../core/index/memoIndex";
+import { resolveMemoBoxAiConfigurationWithSecrets, type MemoBoxAiApiKeySource } from "../../infra/ai/configuration";
 import {
   getSnippetsDirectory,
   getTemplatesDirectory,
@@ -10,20 +17,27 @@ import {
   listTemplateAssets
 } from "../../core/meta/memoAssets";
 import { readPinnedMemoRelativePaths } from "../../core/meta/pinnedMemos";
+import { assessMemoRootScope, type MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import { areSameMemoPaths, getMemoDateDirectory, getPreferredTemplatePath, getQuickMemoFilePath } from "../../core/memo/pathing";
 import { buildMemoTagSummaries, type MemoTagSummary } from "../../core/memo/tags";
 import { getDefaultWorkspaceName, getMemoWorkspaceFilePath } from "../../core/meta/memoWorkspace";
+import { getRecommendedMemoRoot } from "../welcome/recommendedMemoRoot";
 
 export interface AdminDashboardModel {
   readonly version: string;
   readonly generatedAtLabel: string;
   readonly memoRoot: string;
   readonly memoRootReady: boolean;
+  readonly memoRootLooksBroad: boolean;
+  readonly memoRootRiskCodes: readonly MemoRootRiskCode[];
+  readonly recommendedMemoRoot: string;
   readonly workspaceFilePath: string;
   readonly workspaceFileExists: boolean;
   readonly datePathFormat: string;
   readonly metaDir: string;
   readonly locale: string;
+  readonly excludeDirectories: readonly string[];
+  readonly maxScanDepth: number;
   readonly todayDirectory: string;
   readonly todayMemoPath: string;
   readonly templatePath: string;
@@ -34,11 +48,22 @@ export interface AdminDashboardModel {
   readonly snippetsDirectoryReady: boolean;
   readonly templates: readonly AdminTemplateAsset[];
   readonly snippets: readonly AdminSnippetAsset[];
+  readonly aiEnabled: boolean;
+  readonly aiConfigured: boolean;
+  readonly aiProfileName: string;
+  readonly aiProvider: string;
+  readonly aiModel: string;
+  readonly aiEndpoint: string;
+  readonly aiApiKeySource: MemoBoxAiApiKeySource;
+  readonly aiIssueSummary: string;
   readonly totalFiles: number;
   readonly latestUpdatedAtLabel: string;
   readonly indexFilePath: string;
   readonly indexFileExists: boolean;
   readonly indexFileSizeLabel: string;
+  readonly indexLoadSource: MemoIndexLoadSource;
+  readonly indexBackupExists: boolean;
+  readonly indexTransientBackupExists: boolean;
   readonly pinnedFiles: readonly AdminMemoFile[];
   readonly recentFiles: readonly AdminRecentFile[];
   readonly folderCounts: readonly AdminCountRow[];
@@ -88,6 +113,17 @@ export async function buildAdminDashboardModel(
   const pinnedRelativePaths = memoRootReady ? await readPinnedMemoRelativePaths(settings) : [];
   const indexFilePath = settings.memodir.trim() === "" ? "" : getIndexFilePath(settings);
   const indexFileInfo = indexFilePath === "" ? undefined : await readOptionalFileInfo(indexFilePath);
+  const indexStorage = memoRootReady
+    ? await getMemoIndexStorageState(settings)
+    : {
+        primaryPath: "",
+        backupPath: "",
+        transientBackupPath: "",
+        primaryExists: false,
+        backupExists: false,
+        transientBackupExists: false,
+        loadSource: "none" as const
+      };
   const templatesDirectory = memoRootReady ? getTemplatesDirectory(settings) : "";
   const snippetsDirectory = memoRootReady ? getSnippetsDirectory(settings) : "";
   const workspaceFilePath = settings.memodir.trim() === ""
@@ -98,17 +134,25 @@ export async function buildAdminDashboardModel(
   const snippetAssets = memoRootReady ? await listSnippetAssets(settings) : [];
   const templatesDirectoryReady = memoRootReady ? await isExistingDirectory(templatesDirectory) : false;
   const snippetsDirectoryReady = memoRootReady ? await isExistingDirectory(snippetsDirectory) : false;
+  const ai = await resolveMemoBoxAiConfigurationWithSecrets(settings);
+  const memoRootAssessment = assessMemoRootScope(settings.memodir);
+  const recommendedMemoRoot = getRecommendedMemoRoot();
 
   return {
     version,
     generatedAtLabel: format(now, "yyyy-MM-dd HH:mm"),
     memoRoot: settings.memodir.trim(),
     memoRootReady,
+    memoRootLooksBroad: memoRootAssessment.isSuspicious,
+    memoRootRiskCodes: memoRootAssessment.riskCodes,
+    recommendedMemoRoot,
     workspaceFilePath,
     workspaceFileExists: workspaceFileInfo?.exists ?? false,
     datePathFormat: settings.datePathFormat,
     metaDir: settings.metaDir,
     locale: settings.locale,
+    excludeDirectories: settings.excludeDirectories,
+    maxScanDepth: settings.maxScanDepth,
     todayDirectory: memoRootReady ? getMemoDateDirectory(settings, now) : "",
     todayMemoPath: memoRootReady ? getQuickMemoFilePath(settings, now) : "",
     templatePath: memoRootReady ? getPreferredTemplatePath(settings) : "",
@@ -119,11 +163,22 @@ export async function buildAdminDashboardModel(
     snippetsDirectoryReady,
     templates: buildAdminTemplateAssets(templateAssets, settings),
     snippets: buildAdminSnippetAssets(snippetAssets),
+    aiEnabled: ai.enabled,
+    aiConfigured: ai.configured,
+    aiProfileName: ai.profileName,
+    aiProvider: ai.profile?.provider ?? "",
+    aiModel: ai.profile?.model ?? "",
+    aiEndpoint: ai.profile?.endpoint ?? "",
+    aiApiKeySource: ai.profile?.apiKeySource ?? "none",
+    aiIssueSummary: ai.issues.join(" "),
     totalFiles: entries.length,
     latestUpdatedAtLabel: getLatestUpdatedAtLabel(entries),
     indexFilePath,
     indexFileExists: indexFileInfo?.exists ?? false,
     indexFileSizeLabel: indexFileInfo ? formatFileSize(indexFileInfo.size) : "not created",
+    indexLoadSource: indexStorage.loadSource,
+    indexBackupExists: indexStorage.backupExists,
+    indexTransientBackupExists: indexStorage.transientBackupExists,
     pinnedFiles: buildPinnedAdminFiles(entries, pinnedRelativePaths),
     recentFiles: buildAdminRecentFiles(entries, pinnedRelativePaths, settings.recentCount),
     folderCounts: buildAdminFolderCounts(entries),

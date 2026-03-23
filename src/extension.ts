@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 
 import { readSettings } from "./core/config/settings";
+import { initializeMemoBoxAiSecrets } from "./infra/ai/secrets";
+import { applyMemoBoxAiContextKeys } from "./infra/ai/contextKeys";
 import { openAdmin } from "./features/admin/openAdminCommand";
 import { openSetup } from "./features/setup/openSetupCommand";
 import { MemoSnippetProvider } from "./features/snippets/memoSnippetProvider";
@@ -8,14 +10,20 @@ import { isReadyMemoRoot } from "./features/welcome/setupFlow";
 import { registerCommands } from "./registerCommands";
 
 export function activate(context: vscode.ExtensionContext): void {
+  initializeMemoBoxAiSecrets(context.secrets);
   registerCommands(context);
 
   const snippetProvider = new MemoSnippetProvider(() => readSettings());
+  void applyMemoBoxAiContextKeys();
 
   context.subscriptions.push(
     snippetProvider,
     vscode.languages.registerCompletionItemProvider({ language: "markdown" }, snippetProvider),
     vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("memobox.aiEnabled") || event.affectsConfiguration("memobox.ai")) {
+        void applyMemoBoxAiContextKeys();
+      }
+
       if (
         event.affectsConfiguration("memobox.memodir") ||
         event.affectsConfiguration("memobox.metaDir") ||

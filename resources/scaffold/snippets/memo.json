@@ -117,11 +117,13 @@
     "prefix": "frontmatter",
     "body": [
       "---",
+      "title: '${1:Title}'",
+      "tags:",
+      "  - ${2:inbox}",
       "date: $CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE",
-      "tags: [${1:tag}]",
       "---",
       ""
     ],
-    "description": "Insert YAML frontmatter"
+    "description": "Insert YAML frontmatter with title and tags"
   }
 }

@@ -47,7 +47,8 @@ export async function writeMarkdownBrowserPreview(document: MarkdownPreviewDocum
 export function renderMarkdownBrowserPreviewHtml(document: Pick<MarkdownPreviewDocument, "getText" | "fileName" | "uri">): string {
   const title = basename(document.fileName || "Markdown Preview");
   const sourceDirectory = getSourceDirectoryHref(document.uri);
-  const renderedMarkdown = markdownRenderer.render(document.getText());
+  const { frontmatter, markdownBody } = splitFrontmatter(document.getText());
+  const renderedMarkdown = markdownRenderer.render(markdownBody);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -76,6 +77,24 @@ export function renderMarkdownBrowserPreviewHtml(document: Pick<MarkdownPreviewD
 
       article {
         overflow-wrap: anywhere;
+      }
+
+      .frontmatter {
+        margin-bottom: 24px;
+        padding: 16px;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        background: #f6f8fa;
+      }
+
+      .frontmatter-label {
+        display: inline-block;
+        margin-bottom: 10px;
+        color: #57606a;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
       }
 
       h1, h2, h3, h4, h5, h6 {
@@ -153,6 +172,15 @@ export function renderMarkdownBrowserPreviewHtml(document: Pick<MarkdownPreviewD
           background: #161b22;
         }
 
+        .frontmatter {
+          border-color: #30363d;
+          background: #161b22;
+        }
+
+        .frontmatter-label {
+          color: #9da7b3;
+        }
+
         blockquote {
           border-left-color: #30363d;
           color: #9da7b3;
@@ -167,6 +195,11 @@ export function renderMarkdownBrowserPreviewHtml(document: Pick<MarkdownPreviewD
   </head>
   <body>
     <main>
+      ${
+        frontmatter === undefined
+          ? ""
+          : `<section class="frontmatter"><span class="frontmatter-label">Frontmatter</span><pre><code class="language-yaml">${escapeHtml(frontmatter)}</code></pre></section>`
+      }
       <article>
         ${renderedMarkdown}
       </article>
@@ -181,6 +214,32 @@ function getDocumentSlug(document: Pick<MarkdownPreviewDocument, "fileName" | "u
   const suffix = document.uri.scheme === "file" ? "" : `-${document.uri.scheme}`;
 
   return (normalized || "markdown-preview") + suffix;
+}
+
+function splitFrontmatter(markdownText: string): { readonly frontmatter?: string; readonly markdownBody: string } {
+  if (!markdownText.startsWith("---\n") && !markdownText.startsWith("---\r\n")) {
+    return { markdownBody: markdownText };
+  }
+
+  const lines = markdownText.split(/\r?\n/u);
+  if (lines[0] !== "---") {
+    return { markdownBody: markdownText };
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    if (lines[index] !== "---") {
+      continue;
+    }
+
+    const frontmatter = lines.slice(1, index).join("\n");
+    const markdownBody = lines.slice(index + 1).join("\n");
+    return {
+      frontmatter,
+      markdownBody
+    };
+  }
+
+  return { markdownBody: markdownText };
 }
 
 function getSourceDirectoryHref(uri: UriLike): string {

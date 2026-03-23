@@ -3,7 +3,9 @@ import { mkdir, stat } from "node:fs/promises";
 import type { MemoBoxSettings } from "../../core/config/types";
 import { ensureMemoMetaDirectories } from "../../core/meta/memoAssets";
 import { clearMemoIndexCache } from "../../core/index/memoIndex";
+import { assessMemoRootScope } from "../../core/memo/memoRootGuard";
 import { getGlobalConfigurationTarget } from "../../shared/configTarget";
+import { getMemoBoxUiText, resolveUiLanguage } from "../../shared/uiText";
 import { getRecommendedMemoRoot } from "./recommendedMemoRoot";
 
 export async function pickMemoRootFromDialog(): Promise<string | undefined> {
@@ -23,6 +25,9 @@ export async function completeMemoBoxSetup(
   requestedMemoRoot?: string
 ): Promise<string | undefined> {
   const memoRoot = (requestedMemoRoot ?? settings.memodir).trim() || getRecommendedMemoRoot();
+  if (!(await confirmBroadMemoRoot(settings, memoRoot))) {
+    return undefined;
+  }
 
   await mkdir(memoRoot, { recursive: true });
   await vscode.workspace.getConfiguration("memobox").update("memodir", memoRoot, getGlobalConfigurationTarget());
@@ -49,4 +54,23 @@ export async function isReadyMemoRoot(directoryPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function confirmBroadMemoRoot(settings: MemoBoxSettings, memoRoot: string): Promise<boolean> {
+  const assessment = assessMemoRootScope(memoRoot);
+  if (!assessment.isSuspicious) {
+    return true;
+  }
+
+  const ui = getMemoBoxUiText(resolveUiLanguage(settings.locale));
+  const confirmation = await vscode.window.showWarningMessage(
+    ui.setup.broadRootConfirmTitle,
+    {
+      modal: true,
+      detail: ui.setup.broadRootConfirmDetail(memoRoot)
+    },
+    ui.setup.broadRootConfirmAction
+  );
+
+  return confirmation === ui.setup.broadRootConfirmAction;
 }
