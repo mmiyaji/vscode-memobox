@@ -36,6 +36,7 @@ export interface AdminDashboardModel {
   readonly datePathFormat: string;
   readonly metaDir: string;
   readonly locale: string;
+  readonly adminOpenOnStartup: boolean;
   readonly excludeDirectories: readonly string[];
   readonly maxScanDepth: number;
   readonly todayDirectory: string;
@@ -151,6 +152,7 @@ export async function buildAdminDashboardModel(
     datePathFormat: settings.datePathFormat,
     metaDir: settings.metaDir,
     locale: settings.locale,
+    adminOpenOnStartup: settings.adminOpenOnStartup,
     excludeDirectories: settings.excludeDirectories,
     maxScanDepth: settings.maxScanDepth,
     todayDirectory: memoRootReady ? getMemoDateDirectory(settings, now) : "",

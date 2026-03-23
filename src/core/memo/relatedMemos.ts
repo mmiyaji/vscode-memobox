@@ -1,5 +1,6 @@
 import { basename, dirname } from "node:path";
 import type { MemoIndexedEntry } from "../index/memoIndex";
+import { areSameFilePath } from "../../shared/filePathComparison";
 
 export interface RelatedMemoCandidate {
   readonly absolutePath: string;
@@ -16,7 +17,7 @@ export function findRelatedMemos(
   currentMemoPath: string,
   limit = 12
 ): readonly RelatedMemoCandidate[] {
-  const currentEntry = entries.find((entry) => entry.absolutePath === currentMemoPath);
+  const currentEntry = entries.find((entry) => areSameFilePath(entry.absolutePath, currentMemoPath));
   if (!currentEntry) {
     return [];
   }
@@ -27,7 +28,7 @@ export function findRelatedMemos(
   const currentFolder = normalizeDirectory(dirname(currentEntry.relativePath));
 
   return entries
-    .filter((entry) => entry.absolutePath !== currentMemoPath)
+    .filter((entry) => !areSameFilePath(entry.absolutePath, currentMemoPath))
     .map((entry) => {
       const sharedTags = entry.tags.filter((tag) => currentTags.has(tag.toLowerCase()));
       const sharedTokens = Array.from(collectMemoTokens(entry)).filter((token) => currentTokens.has(token));

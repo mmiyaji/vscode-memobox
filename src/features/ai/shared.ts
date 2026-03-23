@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import { readSettings } from "../../core/config/settings";
+import { MemoBoxAiError } from "../../infra/ai/client";
 import { resolveMemoBoxAiConfigurationWithSecrets } from "../../infra/ai/configuration";
+import { logMemoBoxAiError, logMemoBoxAiInfo, logMemoBoxAiWarn } from "../../shared/logging";
+export { parseJsonStringArray, unwrapAiTextResponse } from "./response";
 
 export interface ActiveMemoAiContext {
   readonly editor: vscode.TextEditor;
@@ -28,12 +31,16 @@ export function getActiveMarkdownAiContext(): ActiveMemoAiContext | undefined {
 export async function ensureAiReady() {
   const settings = readSettings();
   if (!settings.aiEnabled) {
+    logMemoBoxAiWarn("command", "AI command rejected because AI is disabled.");
     void vscode.window.showWarningMessage("MemoBox: AI is disabled. Enable memobox.aiEnabled to use AI commands.");
     return undefined;
   }
 
   const resolved = await resolveMemoBoxAiConfigurationWithSecrets(settings);
   if (!resolved.configured || !resolved.profile) {
+    logMemoBoxAiWarn("command", "AI command rejected because configuration is incomplete.", {
+      issue: resolved.issues[0] ?? "unknown"
+    });
     void vscode.window.showWarningMessage(`MemoBox: ${resolved.issues[0] ?? "AI is not configured correctly."}`);
     return undefined;
   }
@@ -45,35 +52,41 @@ export async function ensureAiReady() {
   };
 }
 
-export async function runAiWithProgress<T>(title: string, task: () => Promise<T>): Promise<T | undefined> {
+export async function runAiWithProgress<T>(
+  title: string,
+  // eslint-disable-next-line no-unused-vars
+  task: (...args: [AbortSignal]) => Promise<T>
+): Promise<T | undefined> {
   return await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title,
-      cancellable: false
+      cancellable: true
     },
-    async () => {
+    async (_, cancellationToken) => {
+      const abortController = new AbortController();
+      const subscription = cancellationToken.onCancellationRequested(() => {
+        abortController.abort();
+      });
+
       try {
-        return await task();
+        logMemoBoxAiInfo("command", "AI task started.", { title });
+        const result = await task(abortController.signal);
+        logMemoBoxAiInfo("command", "AI task completed.", { title });
+        return result;
       } catch (error) {
+        if (error instanceof MemoBoxAiError && error.code === "cancelled") {
+          logMemoBoxAiInfo("command", "AI task cancelled.", { title });
+          return undefined;
+        }
+
         const message = error instanceof Error ? error.message : String(error);
+        logMemoBoxAiError("command", "AI task failed.", { title, message });
         void vscode.window.showErrorMessage(`MemoBox: ${message}`);
         return undefined;
+      } finally {
+        subscription.dispose();
       }
     }
   );
-}
-
-export function parseJsonStringArray(rawText: string): readonly string[] {
-  const match = rawText.match(/\[[\s\S]*?\]/u);
-  if (!match) {
-    return [];
-  }
-
-  try {
-    const value = JSON.parse(match[0]) as unknown;
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim() !== "") : [];
-  } catch {
-    return [];
-  }
 }

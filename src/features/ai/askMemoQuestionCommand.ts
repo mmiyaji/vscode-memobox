@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress, unwrapAiTextResponse } from "./shared";
 
 export async function askMemoQuestionCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -31,15 +31,21 @@ export async function askMemoQuestionCommand(): Promise<void> {
     question
   ].join("\n");
 
-  const answer = await runAiWithProgress("MemoBox: Answering question...", async () => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt);
+  const answer = await runAiWithProgress("MemoBox: Answering question...", async (signal) => {
+    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
   });
   if (!answer) {
     return;
   }
 
+  const normalizedAnswer = unwrapAiTextResponse(answer);
+  if (normalizedAnswer === "") {
+    void vscode.window.showWarningMessage("MemoBox: The AI answer was empty.");
+    return;
+  }
+
   const output = await vscode.workspace.openTextDocument({
-    content: `# AI Q&A\n\n**Q:** ${question}\n\n**A:** ${answer.trim()}\n`,
+    content: `# AI Q&A\n\n**Q:** ${question}\n\n**A:** ${normalizedAnswer}\n`,
     language: "markdown"
   });
   await vscode.window.showTextDocument(output, {

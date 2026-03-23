@@ -11,6 +11,7 @@
   "commands.quickMemo.title": "MemoBox: Today's Quick Memo",
   "commands.listMemos.title": "MemoBox: List/Edit",
   "commands.listTags.title": "MemoBox: Browse Tags",
+  "commands.insertMemoLink.title": "MemoBox: Insert Memo Link",
   "commands.createWorkspace.title": "MemoBox Admin: Create Workspace",
   "commands.grepMemos.title": "MemoBox: Grep",
   "commands.todoMemos.title": "MemoBox: Todo",
@@ -22,6 +23,8 @@
   "commands.openMemoFolder.title": "MemoBox Admin: Open Memo Folder",
   "commands.openMarkdownInBrowser.title": "MemoBox: Open Markdown In Browser",
   "commands.openSettings.title": "MemoBox Admin: Settings",
+  "commands.showLogs.title": "MemoBox Admin: Show Logs",
+  "commands.showAiLogs.title": "MemoBox Admin: Show AI Logs",
   "commands.openSetup.title": "MemoBox Admin: Setup",
   "commands.openAdmin.title": "MemoBox Admin: Open Admin",
   "commands.aiAutoTag.title": "MemoBox: AI Auto Tag",
@@ -59,6 +62,7 @@
   "settings.recentCount.description": "How many files are shown in Admin recent files.",
   "settings.adminOpenOnStartup.description": "Open MemoBox Admin automatically when VS Code starts.",
   "settings.locale.description": "UI language used by MemoBox. `auto` follows the VS Code display language.",
+  "settings.logLevel.description": "Log verbosity for the MemoBox and MemoBox AI output channels. `info` records normal operations, `warn` keeps warnings and errors, and `off` disables output.",
   "settings.aiEnabled.description": "Enable MemoBox AI features. When disabled, AI commands are hidden from command menus and the command palette.",
   "settings.ai.description": "Structured AI configuration. Use profiles for provider-specific settings. Prefer VS Code SecretStorage or `apiKeyEnv` over storing secrets directly in settings JSON."
 }

@@ -46,6 +46,16 @@ test("Admin renders memo state and supports pin/unpin from recent files", async 
     const unpinnedFrame = await waitForAdminFrame(app.window);
     const unpinnedPanel = unpinnedFrame.locator("[data-testid='pinned-files-panel']");
     await expect(unpinnedPanel.locator("[data-testid='memo-list-empty']")).toBeVisible();
+
+    await unpinnedFrame
+      .locator("[data-testid='admin-open-on-startup-setting'] input[value='false']")
+      .check({ force: true });
+    await app.window.waitForTimeout(500);
+
+    const refreshedFrame = await waitForAdminFrame(app.window);
+    await expect(
+      refreshedFrame.locator("[data-testid='admin-open-on-startup-setting'] input[value='false']")
+    ).toBeChecked();
   } finally {
     await app.dispose();
   }

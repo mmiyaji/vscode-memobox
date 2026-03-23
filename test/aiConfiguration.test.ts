@@ -64,7 +64,29 @@ test("resolveMemoBoxAiConfiguration reports disabled and misconfigured states", 
   });
 
   assert.equal(broken.configured, false);
-  assert.ok((broken.issues[0] ?? "").length > 0);
+  assert.match(broken.issues[0] ?? "", /profile "broken"/);
+});
+
+test("resolveMemoBoxAiConfiguration reports missing API keys for openai profiles", () => {
+  const resolved = resolveMemoBoxAiConfiguration({
+    aiEnabled: true,
+    ai: normalizeMemoBoxAiSettings({
+      defaultProfile: "cloud",
+      profiles: {
+        cloud: {
+          provider: "openai",
+          endpoint: "https://api.openai.com/v1",
+          model: "gpt-5-mini",
+          apiKey: "",
+          apiKeyEnv: ""
+        }
+      }
+    })
+  });
+
+  assert.equal(resolved.configured, false);
+  assert.match(resolved.issues.join(" "), /API key is empty/);
+  assert.match(resolved.issues.join(" "), /profile "cloud"/);
 });
 
 test.afterEach(() => {

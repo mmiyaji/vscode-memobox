@@ -32,6 +32,7 @@ function createSettings(overrides: Partial<MemoBoxSettings> = {}): MemoBoxSettin
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
     locale: "auto",
+    logLevel: "info",
     aiEnabled: false,
     ai: {
       defaultProfile: "local",

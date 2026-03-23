@@ -120,14 +120,14 @@ function createResolvedMemoBoxAiConfiguration(
   }
 
   if (!profile) {
-    issues.push("Default AI profile is missing.");
+    issues.push(`Default AI profile "${profileName}" is missing.`);
   } else {
     if (profile.endpoint.trim() === "") {
-      issues.push("AI endpoint is empty.");
+      issues.push(`AI endpoint is empty for profile "${profileName}".`);
     }
 
     if (profile.model.trim() === "") {
-        issues.push("AI model is empty.");
+      issues.push(`AI model is empty for profile "${profileName}".`);
     }
   }
 
@@ -142,7 +142,7 @@ function createResolvedMemoBoxAiConfiguration(
     : undefined;
 
   if (resolvedProfile?.provider === "openai" && resolvedProfile.apiKeyValue === "") {
-    issues.push("AI API key is empty for the active OpenAI profile.");
+    issues.push(`AI API key is empty for the active OpenAI profile "${profileName}".`);
   }
 
   return {

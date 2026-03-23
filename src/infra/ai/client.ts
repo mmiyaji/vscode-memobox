@@ -4,16 +4,42 @@ import { readFileSync } from "node:fs";
 import { shouldBypassProxyHost } from "./network";
 import type { ResolvedMemoBoxAiConfiguration } from "./configuration";
 
+type MemoBoxAiErrorCode =
+  | "disabled"
+  | "misconfigured"
+  | "cancelled"
+  | "timeout"
+  | "network"
+  | "authentication"
+  | "model_not_found"
+  | "invalid_response"
+  | "empty_response";
+
+export class MemoBoxAiError extends Error {
+  public readonly code: MemoBoxAiErrorCode;
+
+  public constructor(message: string, code: MemoBoxAiErrorCode) {
+    super(message);
+    this.name = "MemoBoxAiError";
+    this.code = code;
+  }
+}
+
+interface RunMemoBoxAiPromptOptions {
+  readonly signal?: AbortSignal;
+}
+
 export async function runMemoBoxAiPrompt(
   resolved: ResolvedMemoBoxAiConfiguration,
-  prompt: string
+  prompt: string,
+  options: RunMemoBoxAiPromptOptions = {}
 ): Promise<string> {
   if (!resolved.enabled) {
-    throw new Error("AI is disabled.");
+    throw new MemoBoxAiError("AI is disabled.", "disabled");
   }
 
   if (!resolved.configured || !resolved.profile) {
-    throw new Error(resolved.issues[0] ?? "AI is not configured.");
+    throw new MemoBoxAiError(resolved.issues[0] ?? "AI is not configured.", "misconfigured");
   }
 
   const profile = resolved.profile;
@@ -51,16 +77,32 @@ export async function runMemoBoxAiPrompt(
       proxy: resolved.network.proxy,
       proxyBypass: resolved.network.proxyBypass,
       tlsRejectUnauthorized: resolved.network.tlsRejectUnauthorized,
-      tlsCaCert: resolved.network.tlsCaCert
+      tlsCaCert: resolved.network.tlsCaCert,
+      provider: profile.provider,
+      signal: options.signal
     }
   );
 
-  const parsed = JSON.parse(responseText) as {
+  let parsed: {
     readonly message?: { readonly content?: string };
     readonly choices?: readonly { readonly message?: { readonly content?: string } }[];
   };
 
-  return parsed.message?.content ?? parsed.choices?.[0]?.message?.content ?? "";
+  try {
+    parsed = JSON.parse(responseText) as {
+      readonly message?: { readonly content?: string };
+      readonly choices?: readonly { readonly message?: { readonly content?: string } }[];
+    };
+  } catch {
+    throw new MemoBoxAiError("AI returned an invalid JSON response.", "invalid_response");
+  }
+
+  const content = (parsed.message?.content ?? parsed.choices?.[0]?.message?.content ?? "").trim();
+  if (content === "") {
+    throw new MemoBoxAiError("AI returned an empty response.", "empty_response");
+  }
+
+  return content;
 }
 
 interface JsonRequestOptions {
@@ -74,6 +116,8 @@ interface ResolvedNetworkOptions {
   readonly proxyBypass: string;
   readonly tlsRejectUnauthorized: boolean;
   readonly tlsCaCert: string;
+  readonly provider: "ollama" | "openai";
+  readonly signal?: AbortSignal;
 }
 
 async function sendJsonRequest(
@@ -130,7 +174,7 @@ async function sendJsonRequest(
       response.on("end", () => {
         const responseText = Buffer.concat(chunks).toString("utf8");
         if ((response.statusCode ?? 500) >= 400) {
-          reject(new Error(`AI request failed with status ${response.statusCode ?? 500}: ${responseText.slice(0, 300)}`));
+          reject(buildHttpError(response.statusCode ?? 500, responseText, network.provider, parsedUrl.toString()));
           return;
         }
 
@@ -138,11 +182,131 @@ async function sendJsonRequest(
       });
     });
 
-    request.on("error", reject);
+    const abortHandler = () => {
+      request.destroy(new MemoBoxAiError("AI request was cancelled.", "cancelled"));
+    };
+
+    if (network.signal) {
+      if (network.signal.aborted) {
+        abortHandler();
+        return;
+      }
+
+      network.signal.addEventListener("abort", abortHandler, { once: true });
+    }
+
+    request.on("error", (error) => {
+      if (network.signal) {
+        network.signal.removeEventListener("abort", abortHandler);
+      }
+
+      reject(normalizeTransportError(error, network.provider, parsedUrl.toString()));
+    });
     request.setTimeout(options.timeoutMs, () => {
-      request.destroy(new Error("AI request timed out."));
+      request.destroy(new MemoBoxAiError(`AI request timed out after ${options.timeoutMs} ms.`, "timeout"));
+    });
+    request.on("close", () => {
+      if (network.signal) {
+        network.signal.removeEventListener("abort", abortHandler);
+      }
     });
     request.write(body);
     request.end();
   });
+}
+
+function buildHttpError(
+  statusCode: number,
+  responseText: string,
+  provider: "ollama" | "openai",
+  endpoint: string
+): MemoBoxAiError {
+  const extractedMessage = extractResponseErrorMessage(responseText);
+  const normalizedMessage = extractedMessage.toLowerCase();
+
+  if (statusCode === 401 || statusCode === 403) {
+    return new MemoBoxAiError(
+      provider === "openai"
+        ? "AI authentication failed. Check the API key or active profile."
+        : "AI endpoint rejected the request. Check the configured credentials.",
+      "authentication"
+    );
+  }
+
+  if (statusCode === 404 && normalizedMessage.includes("model") && normalizedMessage.includes("not found")) {
+    return new MemoBoxAiError("AI model was not found. Check the configured model name.", "model_not_found");
+  }
+
+  if (normalizedMessage.includes("model") && normalizedMessage.includes("not found")) {
+    return new MemoBoxAiError("AI model was not found. Check the configured model name.", "model_not_found");
+  }
+
+  const suffix = extractedMessage === "" ? "" : ` ${extractedMessage}`;
+  return new MemoBoxAiError(
+    `AI request failed with status ${statusCode} at ${endpoint}.${suffix}`.trim(),
+    "network"
+  );
+}
+
+function extractResponseErrorMessage(responseText: string): string {
+  const trimmed = responseText.trim();
+  if (trimmed === "") {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      readonly error?: string | { readonly message?: string };
+      readonly message?: string;
+    };
+
+    if (typeof parsed.error === "string") {
+      return parsed.error.trim();
+    }
+
+    if (typeof parsed.error?.message === "string") {
+      return parsed.error.message.trim();
+    }
+
+    if (typeof parsed.message === "string") {
+      return parsed.message.trim();
+    }
+  } catch {
+    // Fall through to plain text handling.
+  }
+
+  return trimmed.slice(0, 240);
+}
+
+function normalizeTransportError(
+  error: unknown,
+  provider: "ollama" | "openai",
+  endpoint: string
+): Error {
+  if (error instanceof MemoBoxAiError) {
+    return error;
+  }
+
+  const nodeError = error as NodeJS.ErrnoException | undefined;
+  switch (nodeError?.code) {
+    case "ECONNREFUSED":
+      return new MemoBoxAiError(
+        provider === "ollama"
+          ? `Could not connect to Ollama at ${endpoint}. Start Ollama or check the endpoint URL.`
+          : `Could not connect to the AI endpoint at ${endpoint}. Check the endpoint URL and network access.`,
+        "network"
+      );
+    case "ENOTFOUND":
+    case "EAI_AGAIN":
+      return new MemoBoxAiError(`Could not resolve the AI host for ${endpoint}. Check the endpoint URL.`, "network");
+    case "DEPTH_ZERO_SELF_SIGNED_CERT":
+    case "SELF_SIGNED_CERT_IN_CHAIN":
+    case "UNABLE_TO_VERIFY_LEAF_SIGNATURE":
+      return new MemoBoxAiError(
+        "TLS verification failed for the AI endpoint. Check tlsRejectUnauthorized or the configured CA bundle.",
+        "network"
+      );
+    default:
+      return error instanceof Error ? error : new MemoBoxAiError("AI request failed.", "network");
+  }
 }

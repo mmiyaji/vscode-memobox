@@ -5,7 +5,7 @@ import { readSettings } from "../../core/config/settings";
 import { getMemoIndexEntries, type MemoIndexedEntry } from "../../core/index/memoIndex";
 import { ensureMemoRoot } from "../../core/memo/workspace";
 import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, runAiWithProgress } from "./shared";
+import { ensureAiReady, runAiWithProgress, unwrapAiTextResponse } from "./shared";
 import { resolveReportStartDate, type ReportRangeValue } from "./support";
 
 interface ReportRangeOption {
@@ -66,15 +66,21 @@ export async function reportMemoCommand(): Promise<void> {
     memoSections.join("\n\n")
   ].join("\n");
 
-  const report = await runAiWithProgress("MemoBox: Generating AI report...", async () => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt);
+  const report = await runAiWithProgress("MemoBox: Generating AI report...", async (signal) => {
+    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
   });
   if (!report) {
     return;
   }
 
+  const normalizedReport = unwrapAiTextResponse(report);
+  if (normalizedReport === "") {
+    void vscode.window.showWarningMessage("MemoBox: The AI report was empty.");
+    return;
+  }
+
   const output = await vscode.workspace.openTextDocument({
-    content: `# AI Report ${periodLabel}\n\n${report.trim()}\n`,
+    content: `# AI Report ${periodLabel}\n\n${normalizedReport}\n`,
     language: "markdown"
   });
   await vscode.window.showTextDocument(output, {

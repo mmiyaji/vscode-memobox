@@ -7,6 +7,7 @@ import {
   defaultExcludeDirectories,
   defaultGrepViewMode,
   defaultListDisplayExtname,
+  defaultLogLevel,
   defaultListSortOrder,
   defaultMaxScanDepth,
   defaultMetaDir,
@@ -23,4 +24,5 @@ void test("core configuration constants are stable", () => {
   assert.deepEqual(defaultListDisplayExtname, ["md"]);
   assert.deepEqual(defaultExcludeDirectories, ["node_modules", "dist", "build", "out", "coverage", "vendor"]);
   assert.equal(defaultMaxScanDepth, 4);
+  assert.equal(defaultLogLevel, "info");
 });

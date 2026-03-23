@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress, unwrapAiTextResponse } from "./shared";
 
 export async function proofreadMemoCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -24,15 +24,21 @@ export async function proofreadMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const proofreadResult = await runAiWithProgress("MemoBox: Proofreading with AI...", async () => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt);
+  const proofreadResult = await runAiWithProgress("MemoBox: Proofreading with AI...", async (signal) => {
+    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
   });
   if (!proofreadResult) {
     return;
   }
 
+  const normalizedProofread = unwrapAiTextResponse(proofreadResult);
+  if (normalizedProofread === "") {
+    void vscode.window.showWarningMessage("MemoBox: The AI proofread result was empty.");
+    return;
+  }
+
   const output = await vscode.workspace.openTextDocument({
-    content: `# AI Proofread\n\n${proofreadResult.trim()}\n`,
+    content: `# AI Proofread\n\n${normalizedProofread}\n`,
     language: "markdown"
   });
   await vscode.window.showTextDocument(output, {

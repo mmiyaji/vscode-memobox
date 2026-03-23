@@ -37,6 +37,13 @@ const memoCommandLauncherDescriptors: readonly MemoCommandLauncherDescriptor[] =
     icon: "tag"
   },
   {
+    group: "Context",
+    command: "memobox.insertMemoLink",
+    label: "Insert Memo Link",
+    detail: "Insert a relative Markdown link to another memo from the active editor.",
+    icon: "link"
+  },
+  {
     group: "Daily",
     command: "memobox.grepMemos",
     label: "Grep",
@@ -91,6 +98,20 @@ const memoCommandLauncherDescriptors: readonly MemoCommandLauncherDescriptor[] =
     label: "Clear Index Cache",
     detail: "Remove saved index files and in-memory cache without touching memo files.",
     icon: "trash"
+  },
+  {
+    group: "Maintenance",
+    command: "memobox.showLogs",
+    label: "Show Logs",
+    detail: "Open the MemoBox output channel for setup, index, and maintenance logs.",
+    icon: "output"
+  },
+  {
+    group: "Maintenance",
+    command: "memobox.showAiLogs",
+    label: "Show AI Logs",
+    detail: "Open the MemoBox AI output channel for AI task and configuration logs.",
+    icon: "hubot"
   },
   {
     group: "AI",

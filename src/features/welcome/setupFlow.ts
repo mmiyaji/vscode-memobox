@@ -5,6 +5,7 @@ import { ensureMemoMetaDirectories } from "../../core/meta/memoAssets";
 import { clearMemoIndexCache } from "../../core/index/memoIndex";
 import { assessMemoRootScope } from "../../core/memo/memoRootGuard";
 import { getGlobalConfigurationTarget } from "../../shared/configTarget";
+import { logMemoBoxInfo, logMemoBoxWarn } from "../../shared/logging";
 import { getMemoBoxUiText, resolveUiLanguage } from "../../shared/uiText";
 import { getRecommendedMemoRoot } from "./recommendedMemoRoot";
 
@@ -26,6 +27,7 @@ export async function completeMemoBoxSetup(
 ): Promise<string | undefined> {
   const memoRoot = (requestedMemoRoot ?? settings.memodir).trim() || getRecommendedMemoRoot();
   if (!(await confirmBroadMemoRoot(settings, memoRoot))) {
+    logMemoBoxWarn("setup", "Memo root setup cancelled for a broad path.", { memoRoot });
     return undefined;
   }
 
@@ -39,6 +41,10 @@ export async function completeMemoBoxSetup(
 
   await ensureMemoMetaDirectories(nextSettings);
   clearMemoIndexCache();
+  logMemoBoxInfo("setup", "Memo root setup completed.", {
+    memoRoot,
+    metaDir: nextSettings.metaDir
+  });
   return memoRoot;
 }
 
@@ -71,6 +77,10 @@ async function confirmBroadMemoRoot(settings: MemoBoxSettings, memoRoot: string)
     },
     ui.setup.broadRootConfirmAction
   );
+
+  if (confirmation === ui.setup.broadRootConfirmAction) {
+    logMemoBoxWarn("setup", "User accepted a broad memo root.", { memoRoot });
+  }
 
   return confirmation === ui.setup.broadRootConfirmAction;
 }

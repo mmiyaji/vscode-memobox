@@ -16,6 +16,7 @@ Commands currently available:
 - `MemoBox: Quick Memo`
 - `MemoBox: List/Edit`
 - `MemoBox: Browse Tags`
+- `MemoBox: Insert Memo Link`
 - `MemoBox: Create Workspace`
 - `MemoBox: Grep`
 - `MemoBox: Todo`
@@ -43,7 +44,7 @@ Commands currently available:
 
 `MemoBox: Grep` supports scoped search, cancellation, result caps, multiple result view modes, interactive QuickPick preview with match highlighting, and now skips unreadable files instead of failing the whole run. `MemoBox: Todo` reuses the same scoped preview flow for regex-based todo extraction and the same unreadable-file tolerance. `MemoBox: Refresh Index` reports skipped files during refresh, while `MemoBox: Rebuild Index` clears saved index files before rebuilding and `MemoBox: Clear Index Cache` removes persisted index files without touching memo content.
 
-`MemoBox: Browse Tags` aggregates frontmatter `tags` from indexed memos. `MemoBox: Related Memos` uses shared tags, filename/title tokens, folder proximity, and nearby dates to suggest related notes without AI. `MemoBox: Create Workspace` generates a `MemoBox.code-workspace` file for the memo root with `MemoBox` as the workspace name, and reuses the legacy-style `.templates` / `.snippets` workspace paths. `MemoBox: Open Markdown In Browser` renders the active Markdown document to HTML and opens it in your default browser. `MemoBox: Open Setup` is the dedicated first-run and repair flow for global memo-root setup and optional workspace generation. Admin is kept as an operational dashboard for recent files, pinned files, tags, templates, snippets, and index status. Markdown completions can also load from `.vscode-memobox/snippets/*.json`.
+`MemoBox: Browse Tags` aggregates frontmatter `tags` from indexed memos. `MemoBox: Insert Memo Link` inserts a relative Markdown link to another memo, using the current selection as the link label when available and otherwise falling back to the target memo title or filename. Markdown completion also suggests memo links while typing `[[...` or a Markdown link target such as `[Label](`. `MemoBox: Related Memos` uses shared tags, filename/title tokens, folder proximity, and nearby dates to suggest related notes without AI. `MemoBox: Create Workspace` generates a `MemoBox.code-workspace` file for the memo root with `MemoBox` as the workspace name, and reuses the legacy-style `.templates` / `.snippets` workspace paths. `MemoBox: Open Markdown In Browser` renders the active Markdown document to HTML and opens it in your default browser. `MemoBox: Open Setup` is the dedicated first-run and repair flow for global memo-root setup and optional workspace generation. Admin is kept as an operational dashboard for recent files, pinned files, tags, templates, snippets, and index status. Markdown completions can also load from `.vscode-memobox/snippets/*.json`.
 
 AI is opt-in. `memobox.aiEnabled` is `false` by default, and when it stays off the AI commands are hidden from the command palette and the editor submenu. The structured AI connection settings live under `memobox.ai`, with provider profiles, timeouts, and network options grouped in one JSON object.
 
@@ -59,6 +60,7 @@ Default keybindings are also available:
 - Daily memo creation with date-based folders
 - Quick append to today's memo
 - List, tag browse, grep, and todo extraction
+- Relative memo link insertion from the active editor
 - Non-AI related memo discovery
 - Memo admin dashboard with first-run setup
 - Metadata index persistence, backup recovery, and manual refresh / rebuild / clear operations

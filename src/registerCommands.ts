@@ -11,6 +11,7 @@ import { suggestTemplateCommand } from "./features/ai/suggestTemplateCommand";
 import { summarizeMemoCommand } from "./features/ai/summarizeMemoCommand";
 import { translateMemoCommand } from "./features/ai/translateMemoCommand";
 import { grepMemosCommand } from "./features/commands/grepMemosCommand";
+import { insertMemoLinkCommand } from "./features/commands/insertMemoLinkCommand";
 import { listMemos } from "./features/commands/listMemosCommand";
 import { listTagsCommand } from "./features/commands/listTagsCommand";
 import { createWorkspaceCommand } from "./features/commands/createWorkspaceCommand";
@@ -28,6 +29,7 @@ import { relatedMemosCommand } from "./features/commands/relatedMemosCommand";
 import { todoMemosCommand } from "./features/commands/todoMemosCommand";
 import { openAdmin } from "./features/admin/openAdminCommand";
 import { openSetup } from "./features/setup/openSetupCommand";
+import { showMemoBoxAiLogs, showMemoBoxLogs } from "./shared/logging";
 
 export function registerCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
@@ -42,6 +44,9 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("memobox.listTags", async () => {
       await listTagsCommand();
+    }),
+    vscode.commands.registerCommand("memobox.insertMemoLink", async () => {
+      await insertMemoLinkCommand();
     }),
     vscode.commands.registerCommand("memobox.createWorkspace", async () => {
       await createWorkspaceCommand();
@@ -78,6 +83,12 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("memobox.openSettings", async () => {
       await openSettingsCommand();
+    }),
+    vscode.commands.registerCommand("memobox.showLogs", async () => {
+      showMemoBoxLogs();
+    }),
+    vscode.commands.registerCommand("memobox.showAiLogs", async () => {
+      showMemoBoxAiLogs();
     }),
     vscode.commands.registerCommand("memobox.openAdmin", () => {
       void openAdmin(context);
@@ -141,6 +152,9 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("extension.memoRelated", async () => {
       await relatedMemosCommand();
+    }),
+    vscode.commands.registerCommand("extension.memoInsertLink", async () => {
+      await insertMemoLinkCommand();
     }),
     vscode.commands.registerCommand("extension.memoOpenFolder", async () => {
       await openMemoFolderCommand();

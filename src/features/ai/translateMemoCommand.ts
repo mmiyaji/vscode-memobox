@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress, unwrapAiTextResponse } from "./shared";
 
 export async function translateMemoCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -39,16 +39,22 @@ export async function translateMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const translated = await runAiWithProgress("MemoBox: Translating with AI...", async () => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt);
+  const translated = await runAiWithProgress("MemoBox: Translating with AI...", async (signal) => {
+    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
   });
   if (!translated) {
     return;
   }
 
+  const normalizedTranslation = unwrapAiTextResponse(translated);
+  if (normalizedTranslation === "") {
+    void vscode.window.showWarningMessage("MemoBox: The AI translation was empty.");
+    return;
+  }
+
   if (context.editor.selection.isEmpty) {
     const output = await vscode.workspace.openTextDocument({
-      content: `${translated.trim()}\n`,
+      content: `${normalizedTranslation}\n`,
       language: "markdown"
     });
     await vscode.window.showTextDocument(output, {
@@ -59,6 +65,6 @@ export async function translateMemoCommand(): Promise<void> {
   }
 
   await context.editor.edit((builder) => {
-    builder.replace(context.editor.selection, translated.trim());
+    builder.replace(context.editor.selection, normalizedTranslation);
   });
 }

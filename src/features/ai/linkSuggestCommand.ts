@@ -5,6 +5,7 @@ import { getMemoIndexEntries } from "../../core/index/memoIndex";
 import { readSettings } from "../../core/config/settings";
 import { ensureMemoRoot } from "../../core/memo/workspace";
 import { runMemoBoxAiPrompt } from "../../infra/ai/client";
+import { areSameFilePath } from "../../shared/filePathComparison";
 import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress } from "./shared";
 import { parseLinkSuggestions } from "./support";
 
@@ -23,7 +24,7 @@ export async function linkSuggestCommand(): Promise<void> {
 
   const indexedEntries = await getMemoIndexEntries(settings);
   const candidateEntries = indexedEntries
-    .filter((entry) => entry.absolutePath !== context.document.uri.fsPath)
+    .filter((entry) => !areSameFilePath(entry.absolutePath, context.document.uri.fsPath))
     .sort((left, right) => right.mtime.getTime() - left.mtime.getTime())
     .slice(0, 24);
 
@@ -55,8 +56,8 @@ export async function linkSuggestCommand(): Promise<void> {
     candidateSummaries.join("\n")
   ].join("\n");
 
-  const rawSuggestions = await runAiWithProgress("MemoBox: Suggesting memo links...", async () => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt);
+  const rawSuggestions = await runAiWithProgress("MemoBox: Suggesting memo links...", async (signal) => {
+    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
   });
   if (!rawSuggestions) {
     return;

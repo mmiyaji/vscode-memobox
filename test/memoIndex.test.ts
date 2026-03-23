@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rename, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import type { MemoBoxSettings } from "../src/core/config/types";
 import {
   clearMemoIndexCache,
@@ -10,7 +11,12 @@ import {
   getIndexBackupFilePath,
   getIndexFilePath,
   getMemoIndexEntries,
-  getMemoIndexStorageState
+  getMemoIndexStorageState,
+  markMemoIndexDirtyForPath,
+  noteMemoIndexFileDelete,
+  noteMemoIndexFileRename,
+  noteMemoIndexFileUpsert,
+  refreshMemoIndex
 } from "../src/core/index/memoIndex";
 import { getTransientBackupFilePath } from "../src/shared/safeWrite";
 
@@ -40,6 +46,7 @@ function createSettings(memodir: string): MemoBoxSettings {
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
     locale: "auto",
+    logLevel: "info",
     aiEnabled: false,
     ai: {
       defaultProfile: "local",
@@ -95,7 +102,7 @@ test("memo index refreshes changed files and removes deleted files", async () =>
     await utimes(memoPath, new Date(2026, 2, 23), new Date(2026, 2, 23));
     await rm(removedPath, { force: true });
 
-    const secondEntries = await getMemoIndexEntries(createSettings(memodir));
+    const secondEntries = await refreshMemoIndex(createSettings(memodir));
     assert.equal(secondEntries.length, 1);
     assert.equal(secondEntries[0]?.size, 21);
 
@@ -105,7 +112,7 @@ test("memo index refreshes changed files and removes deleted files", async () =>
     assert.equal(thirdEntries[0]?.relativePath.endsWith("note.md"), true);
   } finally {
     clearMemoIndexCache();
-    await rm(memodir, { force: true, recursive: true });
+    await cleanupTempDirectory(memodir);
   }
 });
 
@@ -143,7 +150,7 @@ test("memo index falls back to backup files and rewrites the primary index", asy
     assert.equal(repairedPrimary.version, 2);
   } finally {
     clearMemoIndexCache();
-    await rm(memodir, { force: true, recursive: true });
+    await cleanupTempDirectory(memodir);
   }
 });
 
@@ -168,7 +175,7 @@ test("clearMemoIndexStorage removes primary and backup index files", async () =>
     assert.equal(storageState.transientBackupExists, false);
   } finally {
     clearMemoIndexCache();
-    await rm(memodir, { force: true, recursive: true });
+    await cleanupTempDirectory(memodir);
   }
 });
 
@@ -196,6 +203,129 @@ test("memo index respects excluded directories and max scan depth", async () => 
     );
   } finally {
     clearMemoIndexCache();
-    await rm(memodir, { force: true, recursive: true });
+    await cleanupTempDirectory(memodir);
   }
 });
+
+test("memo index coalesces frequent reads until the cache is marked dirty", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-index-coalesce-"));
+  clearMemoIndexCache();
+
+  try {
+    await mkdir(join(memodir, "2026", "03"), { recursive: true });
+    const existingPath = join(memodir, "2026", "03", "note.md");
+    const laterPath = join(memodir, "2026", "03", "later.md");
+    const settings = createSettings(memodir);
+
+    await writeFile(existingPath, "# note", "utf8");
+    const firstEntries = await getMemoIndexEntries(settings);
+    assert.equal(firstEntries.length, 1);
+
+    await writeFile(laterPath, "# later", "utf8");
+
+    const secondEntries = await getMemoIndexEntries(settings);
+    assert.equal(secondEntries.length, 1);
+
+    noteMemoIndexFileUpsert(laterPath);
+    const thirdEntries = await getMemoIndexEntries(settings);
+    assert.equal(thirdEntries.length, 2);
+  } finally {
+    clearMemoIndexCache();
+    await cleanupTempDirectory(memodir);
+  }
+});
+
+test("memo index applies delete and rename events incrementally", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-index-events-"));
+  clearMemoIndexCache();
+
+  try {
+    await mkdir(join(memodir, "2026", "03"), { recursive: true });
+    const firstPath = join(memodir, "2026", "03", "first.md");
+    const secondPath = join(memodir, "2026", "03", "second.md");
+    const renamedPath = join(memodir, "2026", "03", "renamed.md");
+    const settings = createSettings(memodir);
+
+    await writeFile(firstPath, "# first", "utf8");
+    await writeFile(secondPath, "# second", "utf8");
+    assert.equal((await getMemoIndexEntries(settings)).length, 2);
+
+    await rm(secondPath, { force: true });
+    noteMemoIndexFileDelete(secondPath);
+    assert.deepEqual(
+      (await getMemoIndexEntries(settings)).map((entry) => entry.relativePath).sort(),
+      ["2026/03/first.md"]
+    );
+
+    await rename(firstPath, renamedPath);
+    noteMemoIndexFileRename(firstPath, renamedPath);
+    assert.deepEqual(
+      (await getMemoIndexEntries(settings)).map((entry) => entry.relativePath).sort(),
+      ["2026/03/renamed.md"]
+    );
+  } finally {
+    clearMemoIndexCache();
+    await cleanupTempDirectory(memodir);
+  }
+});
+
+test("refreshMemoIndex bypasses coalescing for explicit maintenance refreshes", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-index-force-refresh-"));
+  clearMemoIndexCache();
+
+  try {
+    await mkdir(join(memodir, "2026", "03"), { recursive: true });
+    const existingPath = join(memodir, "2026", "03", "note.md");
+    const laterPath = join(memodir, "2026", "03", "later.md");
+    const settings = createSettings(memodir);
+
+    await writeFile(existingPath, "# note", "utf8");
+    await getMemoIndexEntries(settings);
+    await writeFile(laterPath, "# later", "utf8");
+
+    const entries = await refreshMemoIndex(settings);
+    assert.equal(entries.length, 2);
+  } finally {
+    clearMemoIndexCache();
+    await cleanupTempDirectory(memodir);
+  }
+});
+
+test("markMemoIndexDirtyForPath still triggers a full refresh when the change source is unknown", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-index-unknown-dirty-"));
+  clearMemoIndexCache();
+
+  try {
+    await mkdir(join(memodir, "2026", "03"), { recursive: true });
+    const existingPath = join(memodir, "2026", "03", "note.md");
+    const laterPath = join(memodir, "2026", "03", "later.md");
+    const settings = createSettings(memodir);
+
+    await writeFile(existingPath, "# note", "utf8");
+    await getMemoIndexEntries(settings);
+    await writeFile(laterPath, "# later", "utf8");
+
+    markMemoIndexDirtyForPath(laterPath);
+    const entries = await getMemoIndexEntries(settings);
+    assert.equal(entries.length, 2);
+  } finally {
+    clearMemoIndexCache();
+    await cleanupTempDirectory(memodir);
+  }
+});
+
+async function cleanupTempDirectory(directoryPath: string): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await rm(directoryPath, { force: true, recursive: true });
+      return;
+    } catch (error) {
+      lastError = error;
+      await delay(50);
+    }
+  }
+
+  throw lastError;
+}

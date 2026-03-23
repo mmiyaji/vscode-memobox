@@ -29,6 +29,8 @@ export interface MemoBoxUiText {
     readonly actionRefreshIndex: string;
     readonly actionRebuildIndex: string;
     readonly actionClearIndexCache: string;
+    readonly actionShowLogs: string;
+    readonly actionShowAiLogs: string;
     readonly actionCreateWorkspace: string;
     readonly actionOpenSetup: string;
     readonly actionSetAiApiKey: string;
@@ -86,7 +88,10 @@ export interface MemoBoxUiText {
     readonly kvTodayMemoPath: string;
     readonly kvDefaultTemplate: string;
     readonly kvWorkspaceFile: string;
+    readonly kvAdminOpenOnStartup: string;
     readonly kvConfiguration: string;
+    readonly optionEnabled: string;
+    readonly optionDisabled: string;
     readonly maintenanceAssetsTitle: string;
     readonly maintenanceAssetsSubtitle: string;
     readonly templatesTitle: string;
@@ -232,6 +237,8 @@ const englishText: MemoBoxUiText = {
     actionRefreshIndex: "Refresh Index",
     actionRebuildIndex: "Rebuild Index",
     actionClearIndexCache: "Clear Index Cache",
+    actionShowLogs: "Show Logs",
+    actionShowAiLogs: "Show AI Logs",
     actionCreateWorkspace: "Create Workspace",
     actionOpenSetup: "Open Setup",
     actionSetAiApiKey: "Set AI API Key",
@@ -289,7 +296,10 @@ const englishText: MemoBoxUiText = {
     kvTodayMemoPath: "Today Memo Path",
     kvDefaultTemplate: "Default Template",
     kvWorkspaceFile: "Workspace File",
+    kvAdminOpenOnStartup: "Open Admin On Startup",
     kvConfiguration: "Configuration",
+    optionEnabled: "Enabled",
+    optionDisabled: "Disabled",
     maintenanceAssetsTitle: "Maintenance Assets",
     maintenanceAssetsSubtitle: "Template and snippet files used by memo creation and completion.",
     templatesTitle: "Templates",
@@ -423,6 +433,8 @@ const japaneseText: MemoBoxUiText = {
     actionRefreshIndex: "インデックス更新",
     actionRebuildIndex: "インデックス再構築",
     actionClearIndexCache: "インデックスキャッシュ削除",
+    actionShowLogs: "ログを開く",
+    actionShowAiLogs: "AI ログを開く",
     actionCreateWorkspace: "ワークスペース作成",
     actionOpenSetup: "Setup を開く",
     actionSetAiApiKey: "AI API キーを保存",
@@ -480,7 +492,10 @@ const japaneseText: MemoBoxUiText = {
     kvTodayMemoPath: "今日のメモパス",
     kvDefaultTemplate: "既定テンプレート",
     kvWorkspaceFile: "ワークスペースファイル",
+    kvAdminOpenOnStartup: "起動時に管理画面を表示",
     kvConfiguration: "設定",
+    optionEnabled: "有効",
+    optionDisabled: "無効",
     maintenanceAssetsTitle: "保守用アセット",
     maintenanceAssetsSubtitle: "メモ作成と補完で使うテンプレートとスニペットです。",
     templatesTitle: "テンプレート",

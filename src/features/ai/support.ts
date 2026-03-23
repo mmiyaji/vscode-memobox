@@ -1,4 +1,5 @@
 import { startOfDay, startOfWeek, subDays } from "date-fns";
+import { unwrapAiTextResponse } from "./response";
 
 export interface LinkSuggestion {
   readonly keyword: string;
@@ -24,7 +25,8 @@ export function resolveReportStartDate(range: ReportRangeValue, now: Date): Date
 }
 
 export function parseLinkSuggestions(rawText: string): readonly LinkSuggestion[] {
-  const match = rawText.match(/\[[\s\S]*\]/u);
+  const normalizedText = unwrapAiTextResponse(rawText);
+  const match = normalizedText.match(/\[[\s\S]*\]/u);
   const matchedJson = match?.[0];
   if (!matchedJson) {
     return [];

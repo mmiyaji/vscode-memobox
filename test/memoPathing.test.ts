@@ -29,6 +29,7 @@ const settings: MemoBoxSettings = {
   memoNewFilenameFromSelection: false,
   memoNewFilenameDateSuffix: "",
   locale: "auto",
+  logLevel: "info",
   aiEnabled: false,
   ai: {
     defaultProfile: "local",

@@ -12,6 +12,9 @@ export const defaultSearchMaxResults = 200;
 export const defaultRelatedMemoLimit = 12;
 export const defaultExcludeDirectories = ["node_modules", "dist", "build", "out", "coverage", "vendor"] as const;
 export const defaultMaxScanDepth = 4;
+export const defaultIndexRefreshCoalesceMs = 1500;
+export const defaultIndexFullRescanIntervalMs = 300_000;
+export const defaultLogLevel = "info";
 export const defaultAiTimeoutMs = 300_000;
 export const defaultAiSettings = {
   defaultProfile: "local",

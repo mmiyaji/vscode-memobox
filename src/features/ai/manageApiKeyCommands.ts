@@ -3,6 +3,7 @@ import { readSettings } from "../../core/config/settings";
 import { applyMemoBoxAiContextKeys } from "../../infra/ai/contextKeys";
 import { resolveMemoBoxAiConfigurationWithSecrets } from "../../infra/ai/configuration";
 import { clearMemoBoxAiSecret, storeMemoBoxAiSecret } from "../../infra/ai/secrets";
+import { logMemoBoxAiInfo, logMemoBoxAiWarn } from "../../shared/logging";
 
 export async function setAiApiKeyCommand(): Promise<void> {
   const settings = readSettings();
@@ -30,12 +31,14 @@ export async function setAiApiKeyCommand(): Promise<void> {
 
   const trimmedValue = value.trim();
   if (trimmedValue === "") {
+    logMemoBoxAiWarn("secretStorage", "Skipped storing an empty AI API key.", { profileName });
     void vscode.window.showWarningMessage("MemoBox: The API key was empty. Nothing was stored.");
     return;
   }
 
   await storeMemoBoxAiSecret(profileName, trimmedValue);
   await applyMemoBoxAiContextKeys();
+  logMemoBoxAiInfo("secretStorage", "Stored an AI API key.", { profileName, provider: profile.provider });
   void vscode.window.showInformationMessage(`MemoBox: Stored an AI API key for profile "${profileName}".`);
 }
 
@@ -61,6 +64,9 @@ export async function clearAiApiKeyCommand(): Promise<void> {
 
   const removed = await clearMemoBoxAiSecret(profileName);
   await applyMemoBoxAiContextKeys();
+  logMemoBoxAiInfo("secretStorage", removed ? "Cleared a stored AI API key." : "No stored AI API key was found.", {
+    profileName
+  });
   void vscode.window.showInformationMessage(
     removed
       ? `MemoBox: Cleared the stored AI API key for profile "${profileName}".`

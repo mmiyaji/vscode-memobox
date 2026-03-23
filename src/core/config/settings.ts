@@ -7,6 +7,7 @@ import {
   defaultExcludeDirectories,
   defaultGrepViewMode,
   defaultListDisplayExtname,
+  defaultLogLevel,
   defaultListSortOrder,
   defaultMaxScanDepth,
   defaultMetaDir,
@@ -54,6 +55,7 @@ export function readSettings(): MemoBoxSettings {
       ["memoNewFilNameDateSuffix"]
     ).trim(),
     locale: readCompatibleSetting(config, "locale", "auto", ["memoDisplayLanguage"]),
+    logLevel: readCompatibleSetting(config, "logLevel", defaultLogLevel),
     aiEnabled: readCompatibleSetting(config, "aiEnabled", false),
     ai: readAiSettings(config)
   };

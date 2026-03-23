@@ -1,7 +1,9 @@
 import { readFile, readdir, rm, stat } from "node:fs/promises";
-import { basename, extname, join, normalize, relative } from "node:path";
+import { basename, extname, isAbsolute, join, normalize, relative } from "node:path";
 import type { MemoBoxSettings } from "../config/types";
+import { defaultIndexFullRescanIntervalMs } from "../config/constants";
 import { getPersistentBackupFilePath, getTransientBackupFilePath, writeFileSafely } from "../../shared/safeWrite";
+import { logMemoBoxInfo, logMemoBoxWarn } from "../../shared/logging";
 import { extractMemoFrontmatterMetadata } from "../memo/frontmatter";
 
 export interface MemoIndexedEntry {
@@ -53,20 +55,22 @@ export interface MemoIndexStorageState {
   readonly loadSource: MemoIndexLoadSource;
 }
 
+type MemoIndexChange =
+  | {
+      readonly kind: "upsert";
+      readonly filePath: string;
+    }
+  | {
+      readonly kind: "delete";
+      readonly filePath: string;
+    };
+
 export async function getMemoIndexEntries(settings: MemoBoxSettings): Promise<readonly MemoIndexedEntry[]> {
   return (await getMemoIndexReport(settings)).entries;
 }
 
 export async function getMemoIndexReport(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
-  const cacheKey = buildCacheKey(settings);
-  let index = memoIndexCache.get(cacheKey);
-
-  if (!index) {
-    index = new MemoIndex();
-    memoIndexCache.set(cacheKey, index);
-  }
-
-  return index.refresh(settings);
+  return (await getOrCreateMemoIndex(settings)).refresh(settings);
 }
 
 export async function refreshMemoIndex(settings: MemoBoxSettings): Promise<readonly MemoIndexedEntry[]> {
@@ -74,12 +78,57 @@ export async function refreshMemoIndex(settings: MemoBoxSettings): Promise<reado
 }
 
 export async function refreshMemoIndexReport(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
-  memoIndexCache.delete(buildCacheKey(settings));
-  return await getMemoIndexReport(settings);
+  const index = await getOrCreateMemoIndex(settings);
+  index.markDirtyForFullRefresh();
+  return await index.refresh(settings, { force: true });
 }
 
 export function clearMemoIndexCache(): void {
   memoIndexCache.clear();
+}
+
+export function markMemoIndexDirtyForPath(filePath: string): void {
+  const normalizedFilePath = normalize(filePath);
+  for (const index of memoIndexCache.values()) {
+    if (index.isRelevantPath(normalizedFilePath)) {
+      index.markDirtyForFullRefresh();
+    }
+  }
+}
+
+export function markAllMemoIndexesDirty(): void {
+  for (const index of memoIndexCache.values()) {
+    index.markDirtyForFullRefresh();
+  }
+}
+
+export function noteMemoIndexFileUpsert(filePath: string): void {
+  const normalizedFilePath = normalize(filePath);
+  for (const index of memoIndexCache.values()) {
+    if (index.isRelevantPath(normalizedFilePath)) {
+      index.enqueueChange({
+        kind: "upsert",
+        filePath: normalizedFilePath
+      });
+    }
+  }
+}
+
+export function noteMemoIndexFileDelete(filePath: string): void {
+  const normalizedFilePath = normalize(filePath);
+  for (const index of memoIndexCache.values()) {
+    if (index.isRelevantPath(normalizedFilePath)) {
+      index.enqueueChange({
+        kind: "delete",
+        filePath: normalizedFilePath
+      });
+    }
+  }
+}
+
+export function noteMemoIndexFileRename(oldFilePath: string, newFilePath: string): void {
+  noteMemoIndexFileDelete(oldFilePath);
+  noteMemoIndexFileUpsert(newFilePath);
 }
 
 export async function clearMemoIndexStorage(settings: MemoBoxSettings): Promise<number> {
@@ -104,6 +153,11 @@ export async function clearMemoIndexStorage(settings: MemoBoxSettings): Promise<
     }
   }
 
+  logMemoBoxInfo("index", "Cleared persisted memo index storage.", {
+    removedFiles,
+    memodir: settings.memodir
+  });
+
   return removedFiles;
 }
 
@@ -125,16 +179,65 @@ export async function getMemoIndexStorageState(settings: MemoBoxSettings): Promi
 }
 
 class MemoIndex {
+  private readonly rootDir: string;
   private readonly entries = new Map<string, MemoIndexedEntrySnapshot>();
   private loadedFromDisk = false;
   private needsRecoverySave = false;
   private lastLoadSource: MemoIndexLoadSource = "none";
+  private lastRefreshReport: MemoIndexRefreshReport = {
+    entries: [],
+    scannedFiles: 0,
+    skippedFiles: 0
+  };
+  private lastFullRefreshAt = 0;
+  private pendingChanges: MemoIndexChange[] = [];
+  private requiresFullRefresh = true;
+  private refreshPromise: Promise<MemoIndexRefreshReport> | undefined;
 
-  async refresh(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
+  constructor(rootDir: string) {
+    this.rootDir = normalize(rootDir);
+  }
+
+  async refresh(settings: MemoBoxSettings, options: { readonly force?: boolean } = {}): Promise<MemoIndexRefreshReport> {
     if (!this.loadedFromDisk) {
       await this.load(settings);
     }
 
+    if (this.refreshPromise) {
+      return await this.refreshPromise;
+    }
+
+    const shouldRunFullRefresh = options.force
+      || this.requiresFullRefresh
+      || this.shouldRunPeriodicFullRefresh();
+    this.refreshPromise = shouldRunFullRefresh
+      ? this.performFullRefresh(settings)
+      : this.performIncrementalRefresh(settings);
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.refreshPromise = undefined;
+    }
+  }
+
+  enqueueChange(change: MemoIndexChange): void {
+    this.pendingChanges.push(change);
+  }
+
+  markDirtyForFullRefresh(): void {
+    this.requiresFullRefresh = true;
+  }
+
+  isRelevantPath(filePath: string): boolean {
+    return isPathInsideRoot(this.rootDir, filePath);
+  }
+
+  private shouldRunPeriodicFullRefresh(): boolean {
+    return this.lastFullRefreshAt > 0
+      && Date.now() - this.lastFullRefreshAt >= defaultIndexFullRescanIntervalMs;
+  }
+
+  private async performFullRefresh(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
     const absolutePaths = await collectMemoFiles(settings.memodir, settings);
     const nextEntries = new Map<string, MemoIndexedEntrySnapshot>();
     let changed = false;
@@ -199,10 +302,119 @@ class MemoIndex {
       await this.save(settings);
     }
 
-    return {
+    const report: MemoIndexRefreshReport = {
       entries: Array.from(this.entries.values()),
       scannedFiles: absolutePaths.length,
       skippedFiles
+    };
+    this.lastRefreshReport = report;
+    this.lastFullRefreshAt = Date.now();
+    this.pendingChanges = [];
+    this.requiresFullRefresh = false;
+    return report;
+  }
+
+  private async performIncrementalRefresh(settings: MemoBoxSettings): Promise<MemoIndexRefreshReport> {
+    if (this.pendingChanges.length === 0 && !this.needsRecoverySave) {
+      return this.lastRefreshReport;
+    }
+
+    const pendingChanges = this.pendingChanges;
+    this.pendingChanges = [];
+
+    let changed = false;
+    let skippedFiles = 0;
+    let scannedFiles = 0;
+
+    for (const change of pendingChanges) {
+      if (change.kind === "delete") {
+        changed = this.deleteEntryForFilePath(change.filePath) || changed;
+        continue;
+      }
+
+      scannedFiles += 1;
+      const outcome = await this.upsertEntryForFilePath(settings, change.filePath);
+      changed = outcome.changed || changed;
+      skippedFiles += outcome.skippedFiles;
+    }
+
+    if (changed || this.needsRecoverySave) {
+      await this.save(settings);
+    }
+
+    const report: MemoIndexRefreshReport = {
+      entries: Array.from(this.entries.values()),
+      scannedFiles,
+      skippedFiles
+    };
+    this.lastRefreshReport = report;
+    this.requiresFullRefresh = false;
+    return report;
+  }
+
+  private deleteEntryForFilePath(filePath: string): boolean {
+    const relativePath = tryNormalizeIndexedRelativePath(this.rootDir, filePath);
+    if (!relativePath) {
+      return false;
+    }
+
+    return this.entries.delete(relativePath);
+  }
+
+  private async upsertEntryForFilePath(
+    settings: MemoBoxSettings,
+    filePath: string
+  ): Promise<{ readonly changed: boolean; readonly skippedFiles: number }> {
+    const relativePath = tryNormalizeIndexedRelativePath(this.rootDir, filePath);
+    if (!relativePath || !shouldIncludeFile(basename(filePath), settings) || shouldSkipRelativeDirectory(relativePath, settings)) {
+      return {
+        changed: this.deleteEntryForFilePath(filePath),
+        skippedFiles: 0
+      };
+    }
+
+    let fileStat;
+    try {
+      fileStat = await stat(filePath);
+    } catch {
+      return {
+        changed: this.deleteEntryForFilePath(filePath),
+        skippedFiles: 1
+      };
+    }
+
+    const existing = this.entries.get(relativePath);
+    if (existing && existing.mtimeMs === fileStat.mtimeMs && existing.size === fileStat.size) {
+      return {
+        changed: false,
+        skippedFiles: 0
+      };
+    }
+
+    let metadata;
+    try {
+      metadata = extractMemoFrontmatterMetadata(await readFile(filePath, "utf8"));
+    } catch {
+      return {
+        changed: false,
+        skippedFiles: 1
+      };
+    }
+
+    this.entries.set(relativePath, {
+      absolutePath: filePath,
+      relativePath,
+      birthtime: fileStat.birthtime,
+      mtime: fileStat.mtime,
+      mtimeMs: fileStat.mtimeMs,
+      size: fileStat.size,
+      title: metadata.title,
+      tags: metadata.tags
+    });
+
+    return {
+      changed: true,
+      skippedFiles: 0
     };
   }
 
@@ -211,11 +423,26 @@ class MemoIndex {
     const recovered = await readPersistedIndexData(settings);
     if (!recovered) {
       this.lastLoadSource = "none";
+      logMemoBoxInfo("index", "No persisted memo index was available.", {
+        memodir: settings.memodir
+      });
       return;
     }
 
     this.needsRecoverySave = recovered.sourcePath !== getIndexFilePath(settings);
     this.lastLoadSource = recovered.sourceKind;
+
+    if (recovered.sourceKind !== "primary") {
+      logMemoBoxWarn("index", "Loaded persisted memo index from a recovery source.", {
+        sourceKind: recovered.sourceKind,
+        sourcePath: recovered.sourcePath
+      });
+    } else {
+      logMemoBoxInfo("index", "Loaded persisted memo index.", {
+        sourceKind: recovered.sourceKind,
+        entryCount: recovered.data.entries.length
+      });
+    }
 
     for (const entry of recovered.data.entries) {
       if (
@@ -241,6 +468,14 @@ class MemoIndex {
           : []
       });
     }
+
+    this.lastRefreshReport = {
+      entries: Array.from(this.entries.values()),
+      scannedFiles: this.entries.size,
+      skippedFiles: 0
+    };
+    this.lastFullRefreshAt = Date.now();
+    this.requiresFullRefresh = false;
   }
 
   private async save(settings: MemoBoxSettings): Promise<void> {
@@ -261,6 +496,10 @@ class MemoIndex {
     await writeFileSafely(getIndexFilePath(settings), json);
     await writeFileSafely(getIndexBackupFilePath(settings), json);
     this.needsRecoverySave = false;
+    logMemoBoxInfo("index", "Saved persisted memo index.", {
+      entryCount: data.entries.length,
+      memodir: settings.memodir
+    });
   }
 
   getLastLoadSource(): MemoIndexLoadSource {
@@ -313,6 +552,11 @@ function shouldSkipDirectory(name: string, settings: MemoBoxSettings): boolean {
     || settings.excludeDirectories.includes(normalizedName);
 }
 
+function shouldSkipRelativeDirectory(relativePath: string, settings: MemoBoxSettings): boolean {
+  const parts = relativePath.split("/").slice(0, -1).map((part) => part.trim().toLowerCase());
+  return parts.some((part) => shouldSkipDirectory(part, settings));
+}
+
 function shouldIncludeFile(name: string, settings: MemoBoxSettings): boolean {
   const extension = extname(name).replace(/^\./, "").toLowerCase();
   return settings.listDisplayExtname.includes(extension);
@@ -328,6 +572,31 @@ function buildCacheKey(settings: MemoBoxSettings): string {
     settings.metaDir,
     [...settings.listDisplayExtname].sort().join(",")
   ].join("::");
+}
+
+async function getOrCreateMemoIndex(settings: MemoBoxSettings): Promise<MemoIndex> {
+  const cacheKey = buildCacheKey(settings);
+  let index = memoIndexCache.get(cacheKey);
+
+  if (!index) {
+    index = new MemoIndex(settings.memodir);
+    memoIndexCache.set(cacheKey, index);
+  }
+
+  return index;
+}
+
+function isPathInsideRoot(rootDir: string, filePath: string): boolean {
+  const relativePath = relative(rootDir, normalize(filePath));
+  return relativePath !== "" && !relativePath.startsWith("..") && !isAbsolute(relativePath);
+}
+
+function tryNormalizeIndexedRelativePath(rootDir: string, filePath: string): string | undefined {
+  if (!isPathInsideRoot(rootDir, filePath)) {
+    return undefined;
+  }
+
+  return normalizeRelativePath(rootDir, filePath);
 }
 
 export function buildMemoListLabel(relativePath: string): string {
@@ -370,6 +639,10 @@ async function readPersistedIndexData(
       // Try the next recovery source.
     }
   }
+
+  logMemoBoxWarn("index", "Failed to read any persisted memo index source.", {
+    memodir: settings.memodir
+  });
 
   return undefined;
 }

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { setFrontmatterScalar } from "../../core/memo/frontmatterEdit";
 import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress, unwrapAiTextResponse } from "./shared";
 
 export async function summarizeMemoCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -21,14 +21,14 @@ export async function summarizeMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const rawSummary = await runAiWithProgress("MemoBox: Generating summary...", async () => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt);
+  const rawSummary = await runAiWithProgress("MemoBox: Generating summary...", async (signal) => {
+    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
   });
   if (!rawSummary) {
     return;
   }
 
-  const summary = rawSummary.trim().replace(/^["']|["']$/gu, "");
+  const summary = unwrapAiTextResponse(rawSummary).replace(/^["']|["']$/gu, "");
   if (summary === "") {
     void vscode.window.showWarningMessage("MemoBox: The AI summary was empty.");
     return;

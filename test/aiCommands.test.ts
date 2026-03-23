@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { parseJsonStringArray, unwrapAiTextResponse } from "../src/features/ai/response";
 import { parseLinkSuggestions, resolveReportStartDate } from "../src/features/ai/support";
 
 test("parseLinkSuggestions reads JSON suggestions safely", () => {
@@ -10,6 +11,25 @@ test("parseLinkSuggestions reads JSON suggestions safely", () => {
   assert.equal(suggestions.length, 1);
   assert.equal(suggestions[0]?.keyword, "design note");
   assert.equal(suggestions[0]?.memo_index, 2);
+});
+
+test("parseJsonStringArray accepts JSON inside fenced code blocks", () => {
+  const values = parseJsonStringArray("```json\n[\"alpha\", \"beta\"]\n```");
+
+  assert.deepEqual(values, ["alpha", "beta"]);
+});
+
+test("parseLinkSuggestions accepts JSON inside fenced code blocks", () => {
+  const suggestions = parseLinkSuggestions(
+    "```json\n[{\"keyword\":\"design note\",\"memo_index\":2,\"reason\":\"mentions the same topic\"}]\n```"
+  );
+
+  assert.equal(suggestions.length, 1);
+  assert.equal(suggestions[0]?.keyword, "design note");
+});
+
+test("unwrapAiTextResponse removes a single fenced wrapper", () => {
+  assert.equal(unwrapAiTextResponse("```markdown\n# Title\n\nBody\n```"), "# Title\n\nBody");
 });
 
 test("resolveReportStartDate expands common report ranges", () => {

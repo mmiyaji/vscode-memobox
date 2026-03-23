@@ -52,6 +52,7 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
     KV_TODAY_MEMO_PATH: escapeHtml(text.kvTodayMemoPath),
     KV_DEFAULT_TEMPLATE: escapeHtml(text.kvDefaultTemplate),
     KV_WORKSPACE_FILE: escapeHtml(text.kvWorkspaceFile),
+    KV_ADMIN_OPEN_ON_STARTUP: escapeHtml(text.kvAdminOpenOnStartup),
     KV_CONFIGURATION: escapeHtml(text.kvConfiguration),
     MEMO_ROOT: escapeHtml(model.memoRoot || text.notAvailable),
     TODAY_DIRECTORY: escapeHtml(model.todayDirectory || text.notAvailable),
@@ -60,10 +61,12 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
     WORKSPACE_FILE_BLOCK: `${escapeHtml(model.workspaceFilePath || text.notAvailable)}<br />${escapeHtml(
       model.workspaceFileExists ? text.created : text.notCreated
     )}`,
+    ADMIN_OPEN_ON_STARTUP_CONTROL: renderAdminOpenOnStartupControl(model, ui),
     CONFIG_BLOCK: [
       `<code>datePathFormat</code>: ${escapeHtml(model.datePathFormat)}`,
       `<code>metaDir</code>: ${escapeHtml(model.metaDir)}`,
       `<code>locale</code>: ${escapeHtml(model.locale)}`,
+      `<code>adminOpenOnStartup</code>: ${escapeHtml(model.adminOpenOnStartup ? "true" : "false")}`,
       `<code>maxScanDepth</code>: ${escapeHtml(String(model.maxScanDepth))}`,
       `<code>excludeDirectories</code>: ${escapeHtml(model.excludeDirectories.join(", ") || "n/a")}`,
       `<code>indexLoadSource</code>: ${escapeHtml(model.indexLoadSource)}`,
@@ -104,6 +107,8 @@ function renderActionButtons(model: AdminDashboardModel, ui: MemoBoxUiText): str
     { command: "memobox.refreshIndex", label: text.actionRefreshIndex, disabled: !model.memoRootReady, variant: "subtle" },
     { command: "memobox.rebuildIndex", label: text.actionRebuildIndex, disabled: !model.memoRootReady, variant: "subtle" },
     { command: "memobox.clearIndexCache", label: text.actionClearIndexCache, disabled: !model.memoRootReady, variant: "subtle" },
+    { command: "memobox.showLogs", label: text.actionShowLogs, disabled: false, variant: "subtle" },
+    { command: "memobox.showAiLogs", label: text.actionShowAiLogs, disabled: false, variant: "subtle" },
     { command: "memobox.aiSetApiKey", label: text.actionSetAiApiKey, disabled: !model.aiEnabled, variant: "subtle" },
     { command: "memobox.aiClearApiKey", label: text.actionClearAiApiKey, disabled: !model.aiEnabled, variant: "subtle" },
     { command: "memobox.admin.refresh", label: text.actionReloadAdmin, disabled: false, variant: "subtle" },
@@ -296,6 +301,19 @@ function buildAdminScript(): string {
             }
 
             vscode.postMessage({ type: "setDefaultTemplate", path });
+          });
+        });
+
+        document.querySelectorAll("[data-setting-radio='adminOpenOnStartup']").forEach((element) => {
+          element.addEventListener("change", () => {
+            if (!(element instanceof HTMLInputElement)) {
+              return;
+            }
+
+            vscode.postMessage({
+              type: "setAdminOpenOnStartup",
+              value: element.value === "true"
+            });
           });
         });
 
@@ -612,6 +630,35 @@ function renderTagRows(model: AdminDashboardModel, ui: MemoBoxUiText): string {
       `
     )
     .join("");
+}
+
+function renderAdminOpenOnStartupControl(model: AdminDashboardModel, ui: MemoBoxUiText): string {
+  const text = ui.admin;
+
+  return `
+    <div class="setting-choice-group" data-testid="admin-open-on-startup-setting">
+      <label class="setting-choice">
+        <input
+          type="radio"
+          name="adminOpenOnStartup"
+          value="true"
+          data-setting-radio="adminOpenOnStartup"
+          ${model.adminOpenOnStartup ? "checked" : ""}
+        />
+        <span>${escapeHtml(text.optionEnabled)}</span>
+      </label>
+      <label class="setting-choice">
+        <input
+          type="radio"
+          name="adminOpenOnStartup"
+          value="false"
+          data-setting-radio="adminOpenOnStartup"
+          ${model.adminOpenOnStartup ? "" : "checked"}
+        />
+        <span>${escapeHtml(text.optionDisabled)}</span>
+      </label>
+    </div>
+  `;
 }
 
 function getMaintenanceIssueCount(model: AdminDashboardModel): number {

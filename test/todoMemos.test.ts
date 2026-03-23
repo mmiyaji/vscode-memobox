@@ -32,6 +32,7 @@ function createSettings(memodir: string, todoPattern = "^.*@todo.*?:"): MemoBoxS
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
     locale: "auto",
+    logLevel: "info",
     aiEnabled: false,
     ai: {
       defaultProfile: "local",

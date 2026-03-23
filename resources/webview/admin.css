@@ -359,6 +359,24 @@
         overflow-wrap: anywhere;
       }
 
+      .setting-choice-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .setting-choice {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+
+      .setting-choice input {
+        margin: 0;
+      }
+
       .item-card {
         display: grid;
         gap: 10px;

@@ -1,5 +1,6 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { logMemoBoxError, logMemoBoxInfo, logMemoBoxWarn } from "./logging";
 
 const retryableRenameErrorCodes = new Set(["EBUSY", "EPERM", "UNKNOWN"]);
 
@@ -31,14 +32,26 @@ export async function writeFileSafely(filePath: string, data: string): Promise<v
       if (movedOriginal) {
         await rm(backupPath, { force: true }).catch(() => undefined);
       }
+      logMemoBoxInfo("safeWrite", "Wrote file safely.", {
+        filePath,
+        usedTransientBackup: movedOriginal
+      });
     } catch (error) {
       if (movedOriginal) {
         await renameWithRetry(backupPath, filePath).catch(() => undefined);
       }
+      logMemoBoxError("safeWrite", "Failed while replacing the target file.", {
+        filePath,
+        message: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     }
   } catch (error) {
     await rm(tempPath, { force: true }).catch(() => undefined);
+    logMemoBoxError("safeWrite", "Safe write failed.", {
+      filePath,
+      message: error instanceof Error ? error.message : String(error)
+    });
     throw error;
   }
 }
@@ -54,7 +67,9 @@ export function getTransientBackupFilePath(filePath: string): string {
 async function renameWithRetry(sourcePath: string, targetPath: string): Promise<void> {
   let lastError: unknown;
 
-  for (const delayMs of [0, 25, 75, 150]) {
+  const retrySchedule = [0, 25, 75, 150];
+
+  for (const [attempt, delayMs] of retrySchedule.entries()) {
     if (delayMs > 0) {
       await delay(delayMs);
     }
@@ -68,6 +83,14 @@ async function renameWithRetry(sourcePath: string, targetPath: string): Promise<
       if (!nodeError.code || !retryableRenameErrorCodes.has(nodeError.code)) {
         throw error;
       }
+
+      logMemoBoxWarn("safeWrite", "Retrying rename after a transient filesystem error.", {
+        sourcePath,
+        targetPath,
+        attempt: attempt + 1,
+        delayMs,
+        code: nodeError.code
+      });
     }
   }
 

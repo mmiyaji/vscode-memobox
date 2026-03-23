@@ -27,8 +27,8 @@ export async function autoTagMemoCommand(): Promise<void> {
     "---"
   ].filter((line) => line !== "").join("\n");
 
-  const rawResult = await runAiWithProgress("MemoBox: Generating tags...", async () => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt);
+  const rawResult = await runAiWithProgress("MemoBox: Generating tags...", async (signal) => {
+    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
   });
   if (!rawResult) {
     return;

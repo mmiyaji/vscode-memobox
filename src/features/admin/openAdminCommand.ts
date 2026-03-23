@@ -22,6 +22,7 @@ type AdminMessage =
   | { readonly type: "openFile"; readonly path: string }
   | { readonly type: "revealPath"; readonly path: string }
   | { readonly type: "setDefaultTemplate"; readonly path: string }
+  | { readonly type: "setAdminOpenOnStartup"; readonly value: boolean }
   | { readonly type: "clearDefaultTemplate" }
   | { readonly type: "useRecommendedMemoRoot"; readonly path: string }
   | { readonly type: "pinFile"; readonly path: string }
@@ -105,6 +106,10 @@ class MemoAdminPanel {
         await this.setDefaultTemplate(message.path);
         await this.render();
         return;
+      case "setAdminOpenOnStartup":
+        await this.setAdminOpenOnStartup(message.value);
+        await this.render();
+        return;
       case "clearDefaultTemplate":
         await this.clearDefaultTemplate();
         await this.render();
@@ -176,6 +181,8 @@ class MemoAdminPanel {
       case "memobox.clearIndexCache":
         await clearIndexCacheCommand();
         return;
+      case "memobox.showLogs":
+      case "memobox.showAiLogs":
       case "memobox.openMemoFolder":
         await vscode.commands.executeCommand(command);
         return;
@@ -228,6 +235,14 @@ class MemoAdminPanel {
     await vscode.workspace.getConfiguration("memobox").update("memotemplate", "", getMemoBoxConfigurationTarget());
   }
 
+  private async setAdminOpenOnStartup(value: boolean): Promise<void> {
+    await vscode.workspace.getConfiguration("memobox").update(
+      "adminOpenOnStartup",
+      value,
+      getMemoBoxConfigurationTarget()
+    );
+  }
+
   private async useRecommendedMemoRoot(directoryPath: string): Promise<void> {
     if (directoryPath.trim() === "") {
       return;
@@ -275,6 +290,10 @@ function isAdminMessage(value: unknown): value is AdminMessage {
 
   if (candidate.type === "revealPath" || candidate.type === "setDefaultTemplate") {
     return typeof candidate.path === "string";
+  }
+
+  if (candidate.type === "setAdminOpenOnStartup") {
+    return typeof candidate.value === "boolean";
   }
 
   if (candidate.type === "clearDefaultTemplate") {

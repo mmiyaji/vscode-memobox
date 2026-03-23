@@ -2,6 +2,7 @@ export type MemoBoxLocale = "auto" | "ja" | "en";
 export type MemoListSortOrder = "filename" | "mtime" | "birthtime";
 export type MemoGrepViewMode = "quickPick" | "outputChannel" | "both" | "readOnlyDocument" | "editableDocument";
 export type MemoBoxAiProvider = "ollama" | "openai";
+export type MemoBoxLogLevel = "off" | "error" | "warn" | "info";
 
 export interface MemoBoxAiProfileSettings {
   readonly provider: MemoBoxAiProvider;
@@ -51,6 +52,7 @@ export interface MemoBoxSettings {
   readonly memoNewFilenameFromSelection: boolean;
   readonly memoNewFilenameDateSuffix: string;
   readonly locale: MemoBoxLocale;
+  readonly logLevel: MemoBoxLogLevel;
   readonly aiEnabled: boolean;
   readonly ai: MemoBoxAiSettings;
 }

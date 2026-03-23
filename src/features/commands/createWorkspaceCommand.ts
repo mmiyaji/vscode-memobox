@@ -3,6 +3,7 @@ import { access } from "node:fs/promises";
 import { readSettings } from "../../core/config/settings";
 import { writeMemoWorkspaceFile, getDefaultWorkspaceName, getMemoWorkspaceFilePath } from "../../core/meta/memoWorkspace";
 import { ensureMemoRoot } from "../../core/memo/workspace";
+import { logMemoBoxError, logMemoBoxInfo } from "../../shared/logging";
 
 export async function createWorkspaceCommand(
   options: {
@@ -24,13 +25,17 @@ export async function createWorkspaceCommand(
   });
 
   if (options.openAfterCreate) {
+    logMemoBoxInfo("workspace", "Workspace file created.", { workspaceFilePath, openAfterCreate: true });
     await openWorkspaceFile(workspaceFilePath);
     return workspaceFilePath;
   }
 
   if (options.quiet) {
+    logMemoBoxInfo("workspace", "Workspace file created quietly.", { workspaceFilePath });
     return workspaceFilePath;
   }
+
+  logMemoBoxInfo("workspace", "Workspace file created.", { workspaceFilePath });
 
   const action = await vscode.window.showInformationMessage(
     `MemoBox: Workspace file created at ${workspaceFilePath}.`,
@@ -48,6 +53,15 @@ export async function createWorkspaceCommand(
 }
 
 export async function openWorkspaceFile(workspaceFilePath: string): Promise<void> {
-  await access(workspaceFilePath);
-  await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(workspaceFilePath), false);
+  try {
+    await access(workspaceFilePath);
+    await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(workspaceFilePath), false);
+    logMemoBoxInfo("workspace", "Opened workspace file.", { workspaceFilePath });
+  } catch (error) {
+    logMemoBoxError("workspace", "Failed to open workspace file.", {
+      workspaceFilePath,
+      message: error instanceof Error ? error.message : String(error)
+    });
+    throw error;
+  }
 }

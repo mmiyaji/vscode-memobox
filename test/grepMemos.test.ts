@@ -34,6 +34,7 @@ function createSettings(memodir: string): MemoBoxSettings {
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
     locale: "auto",
+    logLevel: "info",
     aiEnabled: false,
     ai: {
       defaultProfile: "local",

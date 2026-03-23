@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import type { MemoBoxSettings } from "../src/core/config/types";
 import {
   getPinnedMemosBackupFilePath,
@@ -39,6 +40,7 @@ function createSettings(memodir: string): MemoBoxSettings {
     memoNewFilenameFromSelection: false,
     memoNewFilenameDateSuffix: "",
     locale: "auto",
+    logLevel: "info",
     aiEnabled: false,
     ai: {
       defaultProfile: "local",
@@ -79,7 +81,7 @@ test("pinned memo store persists relative paths and removes duplicates", async (
 
     assert.deepEqual(await readPinnedMemoRelativePaths(settings), ["2026/03/b.md"]);
   } finally {
-    await rm(memodir, { force: true, recursive: true });
+    await cleanupTempDirectory(memodir);
   }
 });
 
@@ -101,6 +103,22 @@ test("pinned memo store falls back to backup files and repairs the primary file"
     const repairedPrimary = JSON.parse(await readFile(getPinnedMemosFilePath(settings), "utf8")) as { version: number };
     assert.equal(repairedPrimary.version, 1);
   } finally {
-    await rm(memodir, { force: true, recursive: true });
+    await cleanupTempDirectory(memodir);
   }
 });
+
+async function cleanupTempDirectory(directoryPath: string): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await rm(directoryPath, { force: true, recursive: true });
+      return;
+    } catch (error) {
+      lastError = error;
+      await delay(50);
+    }
+  }
+
+  throw lastError;
+}
