@@ -27,6 +27,7 @@
   "commands.showAiLogs.title": "MemoBox Admin: AI ログを開く",
   "commands.openSetup.title": "MemoBox Admin: Setup を開く",
   "commands.openAdmin.title": "MemoBox Admin: 管理画面を開く",
+  "commands.openCommandLauncher.title": "MemoBox: コマンド",
   "commands.aiAutoTag.title": "MemoBox: AI タグ提案",
   "commands.aiSummarize.title": "MemoBox: AI 要約",
   "commands.aiGenerateTitle.title": "MemoBox: AI タイトル生成",

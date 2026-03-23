@@ -27,6 +27,7 @@
   "commands.showAiLogs.title": "MemoBox Admin: Show AI Logs",
   "commands.openSetup.title": "MemoBox Admin: Setup",
   "commands.openAdmin.title": "MemoBox Admin: Open Admin",
+  "commands.openCommandLauncher.title": "MemoBox: Commands",
   "commands.aiAutoTag.title": "MemoBox: AI Auto Tag",
   "commands.aiSummarize.title": "MemoBox: AI Summarize",
   "commands.aiGenerateTitle.title": "MemoBox: AI Generate Title",

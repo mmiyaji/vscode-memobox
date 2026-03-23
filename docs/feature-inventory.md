@@ -1,6 +1,6 @@
 # Feature Inventory
 
-This inventory is based on the sibling `vscode-memo-life-for-you` extension and is used to decide what belongs in MemoBox `v0.1.0`.
+This document summarizes the current product scope for MemoBox `v0.1.x`.
 
 ## Implemented In v0.1.x
 
@@ -38,12 +38,4 @@ This inventory is based on the sibling `vscode-memo-life-for-you` extension and 
 - AI report generation
 - AI proofreading
 - AI translation
-- external Chrome-based editing helpers
-
-## Legacy Cleanup Targets
-
-- split large files such as `memoAdmin.ts` and `memoAi.ts`
-- replace ad-hoc configuration reads with typed settings access
-- remove unused build dependencies
-- eliminate legacy naming from docs and release assets
-- verify text encoding and remove garbled strings before porting localized content
+- external browser-based editing helpers

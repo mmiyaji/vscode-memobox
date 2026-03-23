@@ -158,6 +158,10 @@
         "title": "%commands.openAdmin.title%"
       },
       {
+        "command": "memobox.openCommandLauncher",
+        "title": "%commands.openCommandLauncher.title%"
+      },
+      {
         "command": "memobox.aiAutoTag",
         "title": "%commands.aiAutoTag.title%"
       },
@@ -648,6 +652,8 @@
     "test": "node ./scripts/run-tests.mjs",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:headed": "npm run build && playwright test --headed",
+    "capture:readme-screenshots": "node ./scripts/capture-readme-screenshots.mjs",
+    "capture:readme-gif": "node ./scripts/capture-readme-gif.mjs",
     "validate": "npm run lint && npm run typecheck && npm run test && npm run build",
     "package:vsix": "npm run build && npx @vscode/vsce package --out memobox-0.1.0.vsix"
   },
