@@ -1,7 +1,8 @@
 import { basename, dirname, extname, relative } from "node:path";
+import { defaultLinkRelatedMemoLimit } from "../config/constants";
 import type { MemoIndexedEntry } from "../index/memoIndex";
-import { areSameFilePath } from "../../shared/filePathComparison";
-import { findRelatedMemos } from "./relatedMemos";
+import { areSameFilePath, normalizeFilePathForComparison } from "../../shared/filePathComparison";
+import { findRelatedMemos, type RelatedMemoCandidate } from "./relatedMemos";
 
 export interface MemoLinkCandidate {
   readonly absolutePath: string;
@@ -9,6 +10,19 @@ export interface MemoLinkCandidate {
   readonly label: string;
   readonly detail: string;
   readonly score: number;
+}
+
+type RelatedScoreCache = {
+  readonly key: string;
+  readonly fingerprint: string;
+  readonly timestamp: number;
+  readonly scores: ReadonlyMap<string, RelatedMemoCandidate>;
+};
+
+let relatedScoreCache: RelatedScoreCache | undefined;
+
+export function clearMemoLinkCandidateCache(): void {
+  relatedScoreCache = undefined;
 }
 
 export function buildMemoLinkCandidates(
@@ -20,11 +34,8 @@ export function buildMemoLinkCandidates(
   } = {}
 ): readonly MemoLinkCandidate[] {
   const currentEntry = entries.find((entry) => areSameFilePath(entry.absolutePath, currentMemoPath));
-  const relatedScores = currentEntry
-    ? new Map(findRelatedMemos(entries, currentMemoPath, entries.length).map((entry) => [entry.absolutePath, entry] as const))
-    : new Map();
-
   const normalizedQuery = normalizeQuery(options.query ?? "");
+  const relatedScores = normalizedQuery === "" && currentEntry ? getRelatedScoreMap(entries, currentMemoPath) : new Map();
   const limit = options.limit ?? 50;
 
   return entries
@@ -52,6 +63,39 @@ export function buildMemoLinkCandidates(
     .filter((candidate) => normalizedQuery === "" || candidate.score >= 100)
     .sort((left, right) => right.score - left.score || left.relativePath.localeCompare(right.relativePath))
     .slice(0, limit);
+}
+
+function getRelatedScoreMap(entries: readonly MemoIndexedEntry[], currentMemoPath: string): ReadonlyMap<string, RelatedMemoCandidate> {
+  const cacheKey = normalizeFilePathForComparison(currentMemoPath);
+  const fingerprint = buildRelatedScoreFingerprint(entries);
+  if (
+    relatedScoreCache
+    && relatedScoreCache.key === cacheKey
+    && relatedScoreCache.fingerprint === fingerprint
+    && Date.now() - relatedScoreCache.timestamp <= 10_000
+  ) {
+    return relatedScoreCache.scores as ReadonlyMap<string, RelatedMemoCandidate>;
+  }
+
+  const scores = new Map(
+    findRelatedMemos(entries, currentMemoPath, defaultLinkRelatedMemoLimit).map((entry) => [entry.absolutePath, entry] as const)
+  );
+  relatedScoreCache = {
+    key: cacheKey,
+    fingerprint,
+    timestamp: Date.now(),
+    scores
+  };
+  return scores;
+}
+
+function buildRelatedScoreFingerprint(entries: readonly MemoIndexedEntry[]): string {
+  let latestMtime = 0;
+  for (const entry of entries) {
+    latestMtime = Math.max(latestMtime, entry.mtime.getTime());
+  }
+
+  return `${entries.length}:${latestMtime}`;
 }
 
 export function buildRelativeMarkdownMemoLink(

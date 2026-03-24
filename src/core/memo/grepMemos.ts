@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { defaultGrepConcurrency } from "../config/constants";
 import type { MemoBoxSettings } from "../config/types";
 import { getMemoIndexEntries } from "../index/memoIndex";
 import { filterEntriesByGrepScope, type MemoGrepScope } from "./grepScopes";
@@ -29,43 +30,58 @@ export async function grepMemos(
   const results: MemoTextMatch[] = [];
   const caseSensitive = hasUppercase(trimmedQuery);
   const maxResults = options.maxResults && options.maxResults > 0 ? options.maxResults : Number.POSITIVE_INFINITY;
+  const concurrency = Math.max(defaultGrepConcurrency, 1);
   let skippedFiles = 0;
 
-  for (const file of files) {
+  for (let startIndex = 0; startIndex < files.length; startIndex += concurrency) {
     if (options.isCancellationRequested?.()) {
       return { matches: results, truncated: false, cancelled: true, skippedFiles };
     }
 
-    let content: string;
-    try {
-      content = await readFile(file.absolutePath, "utf8");
-    } catch {
-      skippedFiles += 1;
-      continue;
-    }
+    const batch = files.slice(startIndex, startIndex + concurrency);
+    const batchContents = await Promise.all(
+      batch.map(async (file) => {
+        try {
+          return { file, content: await readFile(file.absolutePath, "utf8") };
+        } catch {
+          return { file, content: undefined as string | undefined };
+        }
+      })
+    );
 
-    const lines = content.split(/\r?\n/u);
-
-    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    for (const { file, content } of batchContents) {
       if (options.isCancellationRequested?.()) {
         return { matches: results, truncated: false, cancelled: true, skippedFiles };
       }
 
-      const line = lines[lineIndex] ?? "";
-      const columnNumbers = findMatchColumns(line, trimmedQuery, caseSensitive);
+      if (content === undefined) {
+        skippedFiles += 1;
+        continue;
+      }
 
-      for (const columnNumber of columnNumbers) {
-        results.push({
-          absolutePath: file.absolutePath,
-          relativePath: file.relativePath,
-          lineNumber: lineIndex + 1,
-          columnNumber: columnNumber + 1,
-          lineText: line.trim(),
-          matchLength: trimmedQuery.length
-        });
+      const lines = content.split(/\r?\n/u);
 
-        if (results.length >= maxResults) {
-          return { matches: results, truncated: true, cancelled: false, skippedFiles };
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+        if (options.isCancellationRequested?.()) {
+          return { matches: results, truncated: false, cancelled: true, skippedFiles };
+        }
+
+        const line = lines[lineIndex] ?? "";
+        const columnNumbers = findMatchColumns(line, trimmedQuery, caseSensitive);
+
+        for (const columnNumber of columnNumbers) {
+          results.push({
+            absolutePath: file.absolutePath,
+            relativePath: file.relativePath,
+            lineNumber: lineIndex + 1,
+            columnNumber: columnNumber + 1,
+            lineText: line.trim(),
+            matchLength: trimmedQuery.length
+          });
+
+          if (results.length >= maxResults) {
+            return { matches: results, truncated: true, cancelled: false, skippedFiles };
+          }
         }
       }
     }

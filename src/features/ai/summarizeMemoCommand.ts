@@ -21,8 +21,11 @@ export async function summarizeMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const rawSummary = await runAiWithProgress("MemoBox: Generating summary...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const rawSummary = await runAiWithProgress("MemoBox: Generating summary...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!rawSummary) {
     return;

@@ -24,8 +24,11 @@ export async function proofreadMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const proofreadResult = await runAiWithProgress("MemoBox: Proofreading with AI...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const proofreadResult = await runAiWithProgress("MemoBox: Proofreading with AI...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!proofreadResult) {
     return;

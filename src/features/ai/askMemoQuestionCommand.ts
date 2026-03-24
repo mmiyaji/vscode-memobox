@@ -31,8 +31,11 @@ export async function askMemoQuestionCommand(): Promise<void> {
     question
   ].join("\n");
 
-  const answer = await runAiWithProgress("MemoBox: Answering question...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const answer = await runAiWithProgress("MemoBox: Answering question...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!answer) {
     return;

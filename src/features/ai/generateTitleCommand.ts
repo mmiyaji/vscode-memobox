@@ -21,8 +21,11 @@ export async function generateAiTitleCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const rawTitles = await runAiWithProgress("MemoBox: Generating title candidates...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const rawTitles = await runAiWithProgress("MemoBox: Generating title candidates...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!rawTitles) {
     return;

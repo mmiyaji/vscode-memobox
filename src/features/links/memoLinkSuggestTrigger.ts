@@ -1,9 +1,11 @@
 import * as vscode from "vscode";
+import { defaultMemoLinkSuggestDebounceMs } from "../../core/config/constants";
 import { detectMemoLinkCompletionContext, shouldTriggerMemoLinkSuggest } from "./memoLinkCompletion";
 import { logMemoBoxInfo } from "../../shared/logging";
 
 export class MemoLinkSuggestTrigger implements vscode.Disposable {
   private readonly subscription: vscode.Disposable;
+  private debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     this.subscription = vscode.workspace.onDidChangeTextDocument((event) => {
@@ -12,6 +14,10 @@ export class MemoLinkSuggestTrigger implements vscode.Disposable {
   }
 
   dispose(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = undefined;
+    }
     this.subscription.dispose();
   }
 
@@ -36,11 +42,18 @@ export class MemoLinkSuggestTrigger implements vscode.Disposable {
       return;
     }
 
-    logMemoBoxInfo("links", "Auto-triggering memo link suggestions.", {
-      filePath: event.document.uri.fsPath,
-      insertedText: change.text,
-      linePrefix
-    });
-    await vscode.commands.executeCommand("editor.action.triggerSuggest");
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = undefined;
+      logMemoBoxInfo("links", "Auto-triggering memo link suggestions.", {
+        filePath: event.document.uri.fsPath,
+        insertedText: change.text,
+        linePrefix
+      });
+      void vscode.commands.executeCommand("editor.action.triggerSuggest");
+    }, defaultMemoLinkSuggestDebounceMs);
   }
 }

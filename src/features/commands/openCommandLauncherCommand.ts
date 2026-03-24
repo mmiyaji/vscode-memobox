@@ -1,13 +1,16 @@
 import * as vscode from "vscode";
 import { readSettings } from "../../core/config/settings";
 import { getMemoCommandLauncherDescriptors } from "./commandLauncherItems";
+import { resolveUiLanguage } from "../../shared/uiText";
 
 interface MemoCommandLauncherItem extends vscode.QuickPickItem {
   readonly command?: string;
 }
 
 export async function openCommandLauncherCommand(): Promise<void> {
-  const descriptors = getMemoCommandLauncherDescriptors({ aiEnabled: readSettings().aiEnabled });
+  const settings = readSettings();
+  const language = resolveUiLanguage(settings.locale);
+  const descriptors = getMemoCommandLauncherDescriptors({ aiEnabled: settings.aiEnabled, language });
   const items: MemoCommandLauncherItem[] = [];
   let currentGroup: string | undefined;
 
@@ -30,7 +33,7 @@ export async function openCommandLauncherCommand(): Promise<void> {
   const selected = await vscode.window.showQuickPick(items, {
     ignoreFocusOut: true,
     matchOnDetail: true,
-    placeHolder: "Run a MemoBox command"
+    placeHolder: language === "ja" ? "MemoBox コマンドを実行" : "Run a MemoBox command"
   });
 
   if (!selected?.command) {

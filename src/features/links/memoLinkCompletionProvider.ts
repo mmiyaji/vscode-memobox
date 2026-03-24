@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { access } from "node:fs/promises";
 import type { MemoBoxSettings } from "../../core/config/types";
 import { getMemoIndexEntries } from "../../core/index/memoIndex";
 import { buildMemoLinkCandidates } from "../../core/memo/memoLinks";
@@ -31,17 +30,6 @@ export class MemoLinkCompletionProvider implements vscode.CompletionItemProvider
     const settings = this.getSettingsFn();
     if (settings.memodir.trim() === "") {
       logMemoBoxWarn("links", "Memo link completion skipped because memodir is empty.", {
-        filePath: document.uri.fsPath,
-        query: context.query
-      });
-      return [];
-    }
-
-    try {
-      await access(settings.memodir);
-    } catch {
-      logMemoBoxWarn("links", "Memo link completion skipped because memodir is not accessible.", {
-        memodir: settings.memodir,
         filePath: document.uri.fsPath,
         query: context.query
       });

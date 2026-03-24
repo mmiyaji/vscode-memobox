@@ -179,9 +179,9 @@ When AI is disabled:
 
 API keys are resolved in this order:
 
-1. settings JSON
-2. VS Code SecretStorage
-3. `apiKeyEnv`
+1. VS Code SecretStorage
+2. `apiKeyEnv`
+3. `apiKey` in settings JSON (legacy compatibility)
 
 For OpenAI-style profiles, SecretStorage or environment variables are preferred over direct settings JSON.
 
@@ -192,7 +192,7 @@ MemoBox writes to two VS Code output channels:
 - `MemoBox`
 - `MemoBox AI`
 
-Use `memobox.logLevel` to control verbosity:
+Use `memobox.logLevel` to control verbosity. The default is `warn`.
 
 - `off`
 - `error`

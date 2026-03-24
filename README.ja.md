@@ -179,9 +179,9 @@ AI を無効にしている間は:
 
 API キーの解決順は次の通りです。
 
-1. settings JSON
-2. VS Code SecretStorage
-3. `apiKeyEnv`
+1. VS Code SecretStorage
+2. `apiKeyEnv`
+3. settings JSON の `apiKey`（旧設定互換）
 
 OpenAI 系 profile では、settings JSON 直書きより SecretStorage または環境変数の利用を推奨します。
 
@@ -192,7 +192,7 @@ MemoBox は 2 つの VS Code OutputChannel にログを出します。
 - `MemoBox`
 - `MemoBox AI`
 
-ログレベルは `memobox.logLevel` で制御できます。
+ログレベルは `memobox.logLevel` で制御できます。既定値は `warn` です。
 
 - `off`
 - `error`

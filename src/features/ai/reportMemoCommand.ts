@@ -66,8 +66,11 @@ export async function reportMemoCommand(): Promise<void> {
     memoSections.join("\n\n")
   ].join("\n");
 
-  const report = await runAiWithProgress("MemoBox: Generating AI report...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const report = await runAiWithProgress("MemoBox: Generating AI report...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!report) {
     return;

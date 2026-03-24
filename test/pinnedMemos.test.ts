@@ -107,6 +107,20 @@ test("pinned memo store falls back to backup files and repairs the primary file"
   }
 });
 
+test("pinned memo store rejects paths outside the memo root", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-pins-scope-"));
+  const settings = createSettings(memodir);
+
+  try {
+    await assert.rejects(
+      pinMemoByAbsolutePath(settings, join(tmpdir(), "outside.md")),
+      /inside memobox\.memodir/
+    );
+  } finally {
+    await cleanupTempDirectory(memodir);
+  }
+});
+
 async function cleanupTempDirectory(directoryPath: string): Promise<void> {
   let lastError: unknown;
 

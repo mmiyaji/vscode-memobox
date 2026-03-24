@@ -39,8 +39,11 @@ export async function translateMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const translated = await runAiWithProgress("MemoBox: Translating with AI...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const translated = await runAiWithProgress("MemoBox: Translating with AI...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!translated) {
     return;

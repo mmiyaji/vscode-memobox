@@ -39,8 +39,11 @@ export async function suggestTemplateCommand(): Promise<void> {
     templateSummaries.join("\n")
   ].join("\n");
 
-  const result = await runAiWithProgress("MemoBox: Suggesting a template...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const result = await runAiWithProgress("MemoBox: Suggesting a template...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!result) {
     return;

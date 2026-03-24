@@ -55,7 +55,7 @@ export async function ensureAiReady() {
 export async function runAiWithProgress<T>(
   title: string,
   // eslint-disable-next-line no-unused-vars
-  task: (...args: [AbortSignal]) => Promise<T>
+  task: (...args: [AbortSignal, vscode.Progress<{ message?: string; increment?: number }>]) => Promise<T>
 ): Promise<T | undefined> {
   return await vscode.window.withProgress(
     {
@@ -63,7 +63,7 @@ export async function runAiWithProgress<T>(
       title,
       cancellable: true
     },
-    async (_, cancellationToken) => {
+    async (progress, cancellationToken) => {
       const abortController = new AbortController();
       const subscription = cancellationToken.onCancellationRequested(() => {
         abortController.abort();
@@ -71,7 +71,7 @@ export async function runAiWithProgress<T>(
 
       try {
         logMemoBoxAiInfo("command", "AI task started.", { title });
-        const result = await task(abortController.signal);
+        const result = await task(abortController.signal, progress);
         logMemoBoxAiInfo("command", "AI task completed.", { title });
         return result;
       } catch (error) {

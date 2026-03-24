@@ -1,6 +1,8 @@
 import * as http from "node:http";
 import * as https from "node:https";
 import { readFileSync } from "node:fs";
+import { setTimeout as delay } from "node:timers/promises";
+import { defaultAiRetryDelaysMs } from "../../core/config/constants";
 import { shouldBypassProxyHost } from "./network";
 import type { ResolvedMemoBoxAiConfiguration } from "./configuration";
 
@@ -17,11 +19,13 @@ type MemoBoxAiErrorCode =
 
 export class MemoBoxAiError extends Error {
   public readonly code: MemoBoxAiErrorCode;
+  public readonly statusCode?: number;
 
-  public constructor(message: string, code: MemoBoxAiErrorCode) {
+  public constructor(message: string, code: MemoBoxAiErrorCode, statusCode?: number) {
     super(message);
     this.name = "MemoBoxAiError";
     this.code = code;
+    this.statusCode = statusCode;
   }
 }
 
@@ -65,7 +69,7 @@ export async function runMemoBoxAiPrompt(
     headers.Authorization = `Bearer ${profile.apiKeyValue}`;
   }
 
-  const responseText = await sendJsonRequest(
+  const responseText = await sendJsonRequestWithRetry(
     url,
     {
       method: "POST",
@@ -215,6 +219,30 @@ async function sendJsonRequest(
   });
 }
 
+async function sendJsonRequestWithRetry(
+  url: string,
+  options: JsonRequestOptions,
+  body: string,
+  network: ResolvedNetworkOptions
+): Promise<string> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= defaultAiRetryDelaysMs.length; attempt += 1) {
+    try {
+      return await sendJsonRequest(url, options, body, network);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableAiError(error) || attempt >= defaultAiRetryDelaysMs.length || network.signal?.aborted) {
+        throw error;
+      }
+
+      await delay(defaultAiRetryDelaysMs[attempt] ?? 0, undefined, { signal: network.signal });
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new MemoBoxAiError("AI request failed.", "network");
+}
+
 function buildHttpError(
   statusCode: number,
   responseText: string,
@@ -244,7 +272,8 @@ function buildHttpError(
   const suffix = extractedMessage === "" ? "" : ` ${extractedMessage}`;
   return new MemoBoxAiError(
     `AI request failed with status ${statusCode} at ${endpoint}.${suffix}`.trim(),
-    "network"
+    "network",
+    statusCode
   );
 }
 
@@ -309,4 +338,20 @@ function normalizeTransportError(
     default:
       return error instanceof Error ? error : new MemoBoxAiError("AI request failed.", "network");
   }
+}
+
+function isRetryableAiError(error: unknown): boolean {
+  if (!(error instanceof MemoBoxAiError)) {
+    return false;
+  }
+
+  if (error.code !== "network") {
+    return false;
+  }
+
+  if (error.statusCode === undefined) {
+    return true;
+  }
+
+  return error.statusCode === 429 || error.statusCode === 502 || error.statusCode === 503;
 }

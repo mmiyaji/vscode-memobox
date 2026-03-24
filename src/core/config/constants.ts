@@ -14,8 +14,12 @@ export const defaultExcludeDirectories = ["node_modules", "dist", "build", "out"
 export const defaultMaxScanDepth = 4;
 export const defaultIndexRefreshCoalesceMs = 1500;
 export const defaultIndexFullRescanIntervalMs = 300_000;
-export const defaultLogLevel = "info";
+export const defaultMemoLinkSuggestDebounceMs = 50;
+export const defaultLinkRelatedMemoLimit = 100;
+export const defaultGrepConcurrency = 8;
+export const defaultLogLevel = "warn";
 export const defaultAiTimeoutMs = 300_000;
+export const defaultAiRetryDelaysMs = [1000, 3000] as const;
 export const defaultAiSettings = {
   defaultProfile: "local",
   profiles: {

@@ -159,13 +159,6 @@ function resolveApiKeyValue(
   profile: MemoBoxAiProfileSettings,
   secretApiKey: string
 ): { readonly value: string; readonly source: MemoBoxAiApiKeySource } {
-  if (profile.apiKey.trim() !== "") {
-    return {
-      value: profile.apiKey.trim(),
-      source: "settings"
-    };
-  }
-
   if (secretApiKey.trim() !== "") {
     return {
       value: secretApiKey.trim(),
@@ -181,6 +174,13 @@ function resolveApiKeyValue(
         source: "environment"
       };
     }
+  }
+
+  if (profile.apiKey.trim() !== "") {
+    return {
+      value: profile.apiKey.trim(),
+      source: "settings"
+    };
   }
 
   return {

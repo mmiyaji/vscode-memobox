@@ -63,7 +63,7 @@
   "settings.recentCount.description": "Admin の Recent Files に表示する件数です。",
   "settings.adminOpenOnStartup.description": "VS Code 起動時に MemoBox Admin を自動で開きます。",
   "settings.locale.description": "MemoBox の UI 言語です。`auto` は VS Code の表示言語に従います。",
-  "settings.logLevel.description": "MemoBox と MemoBox AI の出力チャネルに書き込むログ量です。`info` は通常操作まで、`warn` は警告とエラーのみ、`off` は無効です。",
+  "settings.logLevel.description": "MemoBox と MemoBox AI の出力チャネルに書き込むログ量です。既定値は `warn` で、警告とエラーのみを記録します。`info` は通常操作まで、`off` は無効です。",
   "settings.aiEnabled.description": "MemoBox の AI 機能を有効にします。無効時は AI コマンドをメニューとコマンドパレットに表示しません。",
-  "settings.ai.description": "AI の構造化設定です。provider ごとの差分は profile にまとめてください。秘密情報は settings JSON 直書きよりも VS Code SecretStorage または `apiKeyEnv` を推奨します。"
+  "settings.ai.description": "AI の構造化設定です。provider ごとの差分は profile にまとめてください。秘密情報はまず VS Code SecretStorage、その次に `apiKeyEnv` を推奨します。`apiKey` は旧設定互換のためにのみ残しています。"
 }

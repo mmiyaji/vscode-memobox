@@ -16,7 +16,9 @@ type SetupMessage =
   | { readonly type: "createWorkspaceFile" }
   | { readonly type: "openWorkspaceFile"; readonly path: string }
   | { readonly type: "finishSetup" }
-  | { readonly type: "runCommand"; readonly command: string };
+  | { readonly type: "runCommand"; readonly command: SetupAllowedCommand };
+
+type SetupAllowedCommand = "memobox.openSettings" | "memobox.openMemoFolder" | "memobox.newMemo" | "memobox.openAdmin";
 
 export function openSetup(context: vscode.ExtensionContext): void {
   void MemoSetupPanel.show(context);
@@ -99,7 +101,7 @@ class MemoSetupPanel {
         await this.render();
         return;
       case "runCommand":
-        await vscode.commands.executeCommand(message.command);
+        await this.runRequestedCommand(message.command);
         if (message.command === "memobox.openAdmin") {
           this.panel.dispose();
         }
@@ -146,6 +148,19 @@ class MemoSetupPanel {
       const settings = readSettings();
       const ui = getMemoBoxUiText(resolveUiLanguage(settings.locale));
       await vscode.window.showErrorMessage(ui.setup.workspaceOpenFailed);
+    }
+  }
+
+  private async runRequestedCommand(command: SetupAllowedCommand): Promise<void> {
+    switch (command) {
+      case "memobox.openSettings":
+      case "memobox.openMemoFolder":
+      case "memobox.newMemo":
+      case "memobox.openAdmin":
+        await vscode.commands.executeCommand(command);
+        return;
+      default:
+        return;
     }
   }
 
@@ -199,7 +214,12 @@ function isSetupMessage(value: unknown): value is SetupMessage {
   }
 
   if (candidate.type === "runCommand") {
-    return typeof candidate.command === "string";
+    return (
+      candidate.command === "memobox.openSettings"
+      || candidate.command === "memobox.openMemoFolder"
+      || candidate.command === "memobox.newMemo"
+      || candidate.command === "memobox.openAdmin"
+    );
   }
 
   return false;

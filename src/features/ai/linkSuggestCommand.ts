@@ -56,8 +56,11 @@ export async function linkSuggestCommand(): Promise<void> {
     candidateSummaries.join("\n")
   ].join("\n");
 
-  const rawSuggestions = await runAiWithProgress("MemoBox: Suggesting memo links...", async (signal) => {
-    return await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+  const rawSuggestions = await runAiWithProgress("MemoBox: Suggesting memo links...", async (signal, progress) => {
+    progress.report({ message: "Sending request..." });
+    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
+    progress.report({ message: "Processing response..." });
+    return response;
   });
   if (!rawSuggestions) {
     return;

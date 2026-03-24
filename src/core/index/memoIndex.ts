@@ -5,6 +5,7 @@ import { defaultIndexFullRescanIntervalMs } from "../config/constants";
 import { getPersistentBackupFilePath, getTransientBackupFilePath, writeFileSafely } from "../../shared/safeWrite";
 import { logMemoBoxInfo, logMemoBoxWarn } from "../../shared/logging";
 import { extractMemoFrontmatterMetadata } from "../memo/frontmatter";
+import { clearMemoLinkCandidateCache } from "../memo/memoLinks";
 
 export interface MemoIndexedEntry {
   readonly absolutePath: string;
@@ -85,10 +86,12 @@ export async function refreshMemoIndexReport(settings: MemoBoxSettings): Promise
 
 export function clearMemoIndexCache(): void {
   memoIndexCache.clear();
+  clearMemoLinkCandidateCache();
 }
 
 export function markMemoIndexDirtyForPath(filePath: string): void {
   const normalizedFilePath = normalize(filePath);
+  clearMemoLinkCandidateCache();
   for (const index of memoIndexCache.values()) {
     if (index.isRelevantPath(normalizedFilePath)) {
       index.markDirtyForFullRefresh();
@@ -97,6 +100,7 @@ export function markMemoIndexDirtyForPath(filePath: string): void {
 }
 
 export function markAllMemoIndexesDirty(): void {
+  clearMemoLinkCandidateCache();
   for (const index of memoIndexCache.values()) {
     index.markDirtyForFullRefresh();
   }
@@ -104,6 +108,7 @@ export function markAllMemoIndexesDirty(): void {
 
 export function noteMemoIndexFileUpsert(filePath: string): void {
   const normalizedFilePath = normalize(filePath);
+  clearMemoLinkCandidateCache();
   for (const index of memoIndexCache.values()) {
     if (index.isRelevantPath(normalizedFilePath)) {
       index.enqueueChange({
@@ -116,6 +121,7 @@ export function noteMemoIndexFileUpsert(filePath: string): void {
 
 export function noteMemoIndexFileDelete(filePath: string): void {
   const normalizedFilePath = normalize(filePath);
+  clearMemoLinkCandidateCache();
   for (const index of memoIndexCache.values()) {
     if (index.isRelevantPath(normalizedFilePath)) {
       index.enqueueChange({

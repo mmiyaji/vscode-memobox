@@ -121,7 +121,7 @@ test("resolveMemoBoxAiConfigurationWithSecrets uses SecretStorage for openai pro
   assert.equal(resolved.profile?.apiKeySource, "secretStorage");
 });
 
-test("resolveMemoBoxAiConfiguration prefers settings apiKey over SecretStorage", async () => {
+test("resolveMemoBoxAiConfiguration prefers SecretStorage over settings apiKey", async () => {
   initializeMemoBoxAiSecrets({
     get: async () => "secret-from-store",
     store: async () => undefined,
@@ -144,6 +144,33 @@ test("resolveMemoBoxAiConfiguration prefers settings apiKey over SecretStorage",
     })
   });
 
-  assert.equal(resolved.profile?.apiKeyValue, "secret-from-settings");
-  assert.equal(resolved.profile?.apiKeySource, "settings");
+  assert.equal(resolved.profile?.apiKeyValue, "secret-from-store");
+  assert.equal(resolved.profile?.apiKeySource, "secretStorage");
+});
+
+test("resolveMemoBoxAiConfiguration prefers environment variables over settings apiKey", async () => {
+  process.env.MEMOBOX_AI_TEST_KEY = "secret-from-env";
+
+  try {
+    const resolved = await resolveMemoBoxAiConfigurationWithSecrets({
+      aiEnabled: true,
+      ai: normalizeMemoBoxAiSettings({
+        defaultProfile: "cloud",
+        profiles: {
+          cloud: {
+            provider: "openai",
+            endpoint: "https://api.openai.com/v1",
+            model: "gpt-5-mini",
+            apiKey: "secret-from-settings",
+            apiKeyEnv: "MEMOBOX_AI_TEST_KEY"
+          }
+        }
+      })
+    });
+
+    assert.equal(resolved.profile?.apiKeyValue, "secret-from-env");
+    assert.equal(resolved.profile?.apiKeySource, "environment");
+  } finally {
+    delete process.env.MEMOBOX_AI_TEST_KEY;
+  }
 });

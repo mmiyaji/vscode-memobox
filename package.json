@@ -599,7 +599,7 @@
               "warn",
               "info"
             ],
-            "default": "info",
+            "default": "warn",
             "order": 63,
             "markdownDescription": "%settings.logLevel.description%"
           }
@@ -624,7 +624,6 @@
                   "provider": "ollama",
                   "endpoint": "http://localhost:11434",
                   "model": "qwen3:1.7b",
-                  "apiKey": "",
                   "apiKeyEnv": "",
                   "tagLanguage": "auto",
                   "timeoutMs": 300000

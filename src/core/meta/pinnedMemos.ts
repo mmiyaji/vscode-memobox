@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join, normalize, relative } from "node:path";
 import type { MemoBoxSettings } from "../config/types";
 import { getPersistentBackupFilePath, getTransientBackupFilePath, writeFileSafely } from "../../shared/safeWrite";
+import { isFilePathInsideRoot } from "../../shared/filePathComparison";
 
 type PersistedPinnedMemos = {
   readonly version: 1;
@@ -73,6 +74,10 @@ export function getPinnedMemosBackupFilePath(settings: MemoBoxSettings): string 
 }
 
 function toRelativeMemoPath(settings: MemoBoxSettings, absolutePath: string): string {
+  if (!isFilePathInsideRoot(settings.memodir, absolutePath)) {
+    throw new Error("Pinned memo paths must stay inside memobox.memodir.");
+  }
+
   return relative(settings.memodir, absolutePath).replace(/\\/g, "/");
 }
 
