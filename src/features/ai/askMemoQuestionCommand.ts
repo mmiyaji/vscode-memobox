@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress, unwrapAiTextResponse } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiPromptWithGuards, unwrapAiTextResponse } from "./shared";
 
 export async function askMemoQuestionCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -31,12 +30,7 @@ export async function askMemoQuestionCommand(): Promise<void> {
     question
   ].join("\n");
 
-  const answer = await runAiWithProgress("MemoBox: Answering question...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const answer = await runAiPromptWithGuards("MemoBox: Answering question...", ai, prompt);
   if (!answer) {
     return;
   }

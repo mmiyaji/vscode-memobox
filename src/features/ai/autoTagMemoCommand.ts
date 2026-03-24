@@ -2,8 +2,7 @@ import * as vscode from "vscode";
 import { getMemoIndexEntries } from "../../core/index/memoIndex";
 import { setFrontmatterStringList } from "../../core/memo/frontmatterEdit";
 import { buildMemoTagSummaries } from "../../core/memo/tags";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, parseJsonStringArray, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, parseJsonStringArray, runAiPromptWithGuards } from "./shared";
 
 export async function autoTagMemoCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -27,12 +26,7 @@ export async function autoTagMemoCommand(): Promise<void> {
     "---"
   ].filter((line) => line !== "").join("\n");
 
-  const rawResult = await runAiWithProgress("MemoBox: Generating tags...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const rawResult = await runAiPromptWithGuards("MemoBox: Generating tags...", ai, prompt);
   if (!rawResult) {
     return;
   }

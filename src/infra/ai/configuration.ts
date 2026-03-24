@@ -52,7 +52,10 @@ export function buildLegacyMemoBoxAiSettings(input: LegacyMemoBoxAiSettingsInput
         apiKey: normalizeString(input.apiKey, ""),
         apiKeyEnv: "",
         tagLanguage: normalizeLocale(input.tagLanguage, defaultAiSettings.profiles.local.tagLanguage),
-        timeoutMs: defaultAiTimeoutMs
+        timeoutMs: defaultAiTimeoutMs,
+        inputCostPer1kUsd: defaultAiSettings.profiles.local.inputCostPer1kUsd,
+        outputCostPer1kUsd: defaultAiSettings.profiles.local.outputCostPer1kUsd,
+        estimatedOutputTokens: defaultAiSettings.profiles.local.estimatedOutputTokens
       }
     },
     network: {
@@ -218,7 +221,13 @@ function normalizeProfile(rawProfile: Record<string, unknown>, fallback: MemoBox
     apiKey: normalizeString(rawProfile.apiKey, fallback.apiKey),
     apiKeyEnv: normalizeString(rawProfile.apiKeyEnv, fallback.apiKeyEnv),
     tagLanguage: normalizeLocale(rawProfile.tagLanguage, fallback.tagLanguage),
-    timeoutMs: normalizeTimeout(rawProfile.timeoutMs, fallback.timeoutMs)
+    timeoutMs: normalizeTimeout(rawProfile.timeoutMs, fallback.timeoutMs),
+    inputCostPer1kUsd: normalizeNonNegativeNumber(rawProfile.inputCostPer1kUsd, fallback.inputCostPer1kUsd ?? 0),
+    outputCostPer1kUsd: normalizeNonNegativeNumber(rawProfile.outputCostPer1kUsd, fallback.outputCostPer1kUsd ?? 0),
+    estimatedOutputTokens: normalizeEstimatedOutputTokens(
+      rawProfile.estimatedOutputTokens,
+      fallback.estimatedOutputTokens ?? defaultAiSettings.profiles.local.estimatedOutputTokens
+    )
   };
 }
 
@@ -237,6 +246,14 @@ function normalizeNetwork(rawNetwork: unknown, fallback: MemoBoxAiNetworkSetting
 
 function normalizeTimeout(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+}
+
+function normalizeEstimatedOutputTokens(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : fallback;
+}
+
+function normalizeNonNegativeNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
 function normalizeProvider(value: unknown, fallback: MemoBoxAiProvider): MemoBoxAiProvider {

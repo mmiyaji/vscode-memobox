@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   configurationSection,
   defaultDatePathFormat,
+  defaultAiCostMode,
   defaultExcludeDirectories,
   defaultGrepViewMode,
   defaultListDisplayExtname,
@@ -25,4 +26,5 @@ void test("core configuration constants are stable", () => {
   assert.deepEqual(defaultExcludeDirectories, ["node_modules", "dist", "build", "out", "coverage", "vendor"]);
   assert.equal(defaultMaxScanDepth, 4);
   assert.equal(defaultLogLevel, "warn");
+  assert.equal(defaultAiCostMode, "off");
 });

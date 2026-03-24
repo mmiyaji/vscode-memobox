@@ -13,7 +13,7 @@
     <main data-testid="admin-root">
 {{WARNING_BANNER}}
       <section class="overview" data-testid="admin-hero">
-        <div class="overview-head">
+        <div class="overview-header">
           <div>
             <span class="eyebrow">MemoBox v{{VERSION}}</span>
             <h1 data-testid="admin-title">{{OVERVIEW_TITLE}}</h1>
@@ -26,9 +26,10 @@
               {{SCOPE_LABEL}}: {{MEMO_SCOPE}}
             </p>
           </div>
-          <div class="summary-grid" data-testid="admin-stats">
+        </div>
+
+        <div class="summary-grid" data-testid="admin-stats">
 {{SUMMARY_CARDS}}
-          </div>
         </div>
 
         <div class="toolbar">
@@ -75,6 +76,8 @@
         </div>
 
         <div class="stack">
+{{AI_USAGE_PANEL}}
+
           <article class="panel" data-testid="workspace-panel">
             <div class="panel-head">
               <h2>{{WORKSPACE_STATUS_TITLE}}</h2>

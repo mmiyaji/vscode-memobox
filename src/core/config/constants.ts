@@ -20,6 +20,10 @@ export const defaultGrepConcurrency = 8;
 export const defaultLogLevel = "warn";
 export const defaultAiTimeoutMs = 300_000;
 export const defaultAiRetryDelaysMs = [1000, 3000] as const;
+export const defaultAiCostMode = "off";
+export const defaultAiPerRequestLimitUsd = 0;
+export const defaultAiMonthlyLimitUsd = 0;
+export const defaultAiEstimatedOutputTokens = 800;
 export const defaultAiSettings = {
   defaultProfile: "local",
   profiles: {
@@ -30,7 +34,10 @@ export const defaultAiSettings = {
       apiKey: "",
       apiKeyEnv: "",
       tagLanguage: "auto",
-      timeoutMs: defaultAiTimeoutMs
+      timeoutMs: defaultAiTimeoutMs,
+      inputCostPer1kUsd: 0,
+      outputCostPer1kUsd: 0,
+      estimatedOutputTokens: defaultAiEstimatedOutputTokens
     }
   },
   network: {

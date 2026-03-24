@@ -2,8 +2,7 @@ import * as vscode from "vscode";
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { getTemplatesDirectory, listTemplateAssets } from "../../core/meta/memoAssets";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiPromptWithGuards } from "./shared";
 
 export async function suggestTemplateCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -39,12 +38,7 @@ export async function suggestTemplateCommand(): Promise<void> {
     templateSummaries.join("\n")
   ].join("\n");
 
-  const result = await runAiWithProgress("MemoBox: Suggesting a template...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const result = await runAiPromptWithGuards("MemoBox: Suggesting a template...", ai, prompt);
   if (!result) {
     return;
   }

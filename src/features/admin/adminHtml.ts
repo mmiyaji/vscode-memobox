@@ -45,6 +45,7 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
     PINNED_MEMOS: renderMemoItems(model.pinnedFiles, text.noPinnedFiles, ui),
     FOLDER_ROWS: renderFolderRows(model.folderCounts, model.totalFiles, ui),
     TAG_ROWS: renderTagRows(model, ui),
+    AI_USAGE_PANEL: renderAiUsagePanel(model, ui),
     WORKSPACE_STATUS_TITLE: escapeHtml(text.workspaceStatusTitle),
     WORKSPACE_STATUS_SUBTITLE: escapeHtml(text.workspaceStatusSubtitle),
     KV_MEMO_ROOT: escapeHtml(text.kvMemoRoot),
@@ -71,12 +72,7 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
       `<code>excludeDirectories</code>: ${escapeHtml(model.excludeDirectories.join(", ") || "n/a")}`,
       `<code>indexLoadSource</code>: ${escapeHtml(model.indexLoadSource)}`,
       `<code>indexBackup</code>: ${escapeHtml(model.indexBackupExists ? "present" : "missing")}`,
-      `<code>indexTransientBackup</code>: ${escapeHtml(model.indexTransientBackupExists ? "present" : "missing")}`,
-      `<code>aiEnabled</code>: ${escapeHtml(model.aiEnabled ? "true" : "false")}`,
-      `<code>aiProfile</code>: ${escapeHtml(model.aiProfileName || "n/a")}`,
-      `<code>aiProvider</code>: ${escapeHtml(model.aiProvider || "n/a")}`,
-      `<code>aiModel</code>: ${escapeHtml(model.aiModel || "n/a")}`,
-      `<code>aiApiKeySource</code>: ${escapeHtml(getAiApiKeySourceLabel(model, ui))}`
+      `<code>indexTransientBackup</code>: ${escapeHtml(model.indexTransientBackupExists ? "present" : "missing")}`
     ].join("<br />"),
     MAINTENANCE_ASSETS_TITLE: escapeHtml(text.maintenanceAssetsTitle),
     MAINTENANCE_ASSETS_SUBTITLE: escapeHtml(text.maintenanceAssetsSubtitle),
@@ -390,11 +386,75 @@ function buildAiDetail(model: AdminDashboardModel, ui: MemoBoxUiText): string {
 
   return [
     escapeHtml(model.aiProfileName),
-    escapeHtml(model.aiProvider),
     escapeHtml(model.aiModel),
-    escapeHtml(model.aiEndpoint),
     escapeHtml(text.summaryAiKey(getAiApiKeySourceLabel(model, ui)))
   ].join(" | ");
+}
+
+function renderAiUsagePanel(model: AdminDashboardModel, ui: MemoBoxUiText): string {
+  const text = ui.admin;
+  if (!model.aiEnabled) {
+    return "";
+  }
+
+  const costLabel = model.aiMonthlyEstimatedCostUsd > 0
+    ? formatUsdLabel(model.aiMonthlyEstimatedCostUsd)
+    : "$0.00";
+
+  const configRows = [
+    { key: "Profile", value: model.aiProfileName },
+    { key: "Provider", value: model.aiProvider },
+    { key: "Model", value: model.aiModel },
+    { key: "Endpoint", value: model.aiEndpoint },
+    { key: "API Key", value: getAiApiKeySourceLabel(model, ui) },
+    { key: "Cost Mode", value: model.aiCostMode }
+  ];
+
+  if (model.aiPerRequestLimitUsd > 0) {
+    configRows.push({ key: "Per-request Limit", value: formatUsdLabel(model.aiPerRequestLimitUsd) });
+  }
+
+  if (model.aiMonthlyLimitUsd > 0) {
+    configRows.push({ key: "Monthly Limit", value: formatUsdLabel(model.aiMonthlyLimitUsd) });
+  }
+
+  if (!model.aiConfigured) {
+    configRows.length = 0;
+    configRows.push({ key: "Status", value: model.aiIssueSummary || text.summaryAiNeedsSetupDetail });
+  }
+
+  return `
+          <article class="panel" data-testid="ai-usage-panel">
+            <div class="panel-head">
+              <h2>${escapeHtml(text.summaryAi)}</h2>
+              <p class="panel-subtitle">${escapeHtml(model.aiConfigured ? text.summaryAiConfigured : text.summaryAiNeedsSetup)}</p>
+            </div>
+            <div class="ai-usage-grid">
+              <div class="ai-usage-card">
+                <span class="ai-usage-value">${escapeHtml(costLabel)}</span>
+                <span class="ai-usage-label">Monthly Cost</span>
+              </div>
+              <div class="ai-usage-card">
+                <span class="ai-usage-value">${escapeHtml(String(model.aiMonthlyRequestCount))}</span>
+                <span class="ai-usage-label">Requests</span>
+              </div>
+              <div class="ai-usage-card">
+                <span class="ai-usage-value">${escapeHtml(model.aiModel || "n/a")}</span>
+                <span class="ai-usage-label">Model</span>
+              </div>
+            </div>
+            <div class="ai-config-grid">
+              ${configRows
+                .map(
+                  (row) => `
+              <div class="ai-config-row">
+                <code class="ai-config-key">${escapeHtml(row.key)}</code>
+                <span class="ai-config-val">${escapeHtml(row.value || "n/a")}</span>
+              </div>`
+                )
+                .join("")}
+            </div>
+          </article>`;
 }
 
 function getAiApiKeySourceLabel(model: AdminDashboardModel, ui: MemoBoxUiText): string {
@@ -412,6 +472,14 @@ function getAiApiKeySourceLabel(model: AdminDashboardModel, ui: MemoBoxUiText): 
     default:
       return text.summaryAiKeyMissing;
   }
+}
+
+function formatUsdLabel(value: number): string {
+  if (value > 0 && value < 0.01) {
+    return "<$0.01";
+  }
+
+  return `$${value.toFixed(2)}`;
 }
 
 function renderTemplateSection(model: AdminDashboardModel, ui: MemoBoxUiText): string {
@@ -598,12 +666,17 @@ function renderFolderRows(folderCounts: readonly AdminCountRow[], totalFiles: nu
       const ratio = totalFiles === 0 ? 0 : Math.round((item.count / totalFiles) * 100);
 
       return `
-        <li class="folder-row">
-          <span class="folder-name">${escapeHtml(item.label)}</span>
-          <span class="folder-meta">
-            <span>${escapeHtml(text.files(item.count))}</span>
-            <span>${ratio}%</span>
-          </span>
+        <li class="folder-row-container">
+          <div class="folder-row">
+            <span class="folder-name">${escapeHtml(item.label)}</span>
+            <span class="folder-meta">
+              <span>${escapeHtml(text.files(item.count))}</span>
+              <span>${ratio}%</span>
+            </span>
+          </div>
+          <div class="folder-bar-track" aria-hidden="true">
+            <div class="folder-bar-fill" style="width: ${ratio}%;"></div>
+          </div>
         </li>
       `;
     })

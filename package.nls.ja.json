@@ -65,5 +65,8 @@
   "settings.locale.description": "MemoBox の UI 言語です。`auto` は VS Code の表示言語に従います。",
   "settings.logLevel.description": "MemoBox と MemoBox AI の出力チャネルに書き込むログ量です。既定値は `warn` で、警告とエラーのみを記録します。`info` は通常操作まで、`off` は無効です。",
   "settings.aiEnabled.description": "MemoBox の AI 機能を有効にします。無効時は AI コマンドをメニューとコマンドパレットに表示しません。",
-  "settings.ai.description": "AI の構造化設定です。provider ごとの差分は profile にまとめてください。秘密情報はまず VS Code SecretStorage、その次に `apiKeyEnv` を推奨します。`apiKey` は旧設定互換のためにのみ残しています。"
+  "settings.ai.description": "AI の構造化設定です。provider ごとの差分は profile にまとめてください。秘密情報はまず VS Code SecretStorage、その次に `apiKeyEnv` を推奨します。`apiKey` は旧設定互換のためにのみ残しています。任意のコスト設定として `inputCostPer1kUsd`、`outputCostPer1kUsd`、`estimatedOutputTokens` を指定できます。",
+  "settings.aiCostMode.description": "AI コストの見積もりと制御の方式です。`off` は無効、`estimateOnly` は見積もり表示のみ、`confirmHighCost` は高コスト時に確認、`softCap` は上限超過時に警告、`hardCap` は上限超過時に実行をブロックします。",
+  "settings.aiPerRequestLimitUsd.description": "`confirmHighCost` / `softCap` / `hardCap` で使う 1 リクエストあたりの推定 USD 上限です。`0` で無効になります。",
+  "settings.aiMonthlyLimitUsd.description": "`softCap` / `hardCap` で使う月次の推定 USD 上限です。`0` で無効になります。"
 }

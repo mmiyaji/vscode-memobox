@@ -615,6 +615,33 @@
             "order": 70,
             "markdownDescription": "%settings.aiEnabled.description%"
           },
+          "memobox.aiCostMode": {
+            "type": "string",
+            "enum": [
+              "off",
+              "estimateOnly",
+              "confirmHighCost",
+              "softCap",
+              "hardCap"
+            ],
+            "default": "off",
+            "order": 71,
+            "markdownDescription": "%settings.aiCostMode.description%"
+          },
+          "memobox.aiPerRequestLimitUsd": {
+            "type": "number",
+            "default": 0,
+            "minimum": 0,
+            "order": 72,
+            "markdownDescription": "%settings.aiPerRequestLimitUsd.description%"
+          },
+          "memobox.aiMonthlyLimitUsd": {
+            "type": "number",
+            "default": 0,
+            "minimum": 0,
+            "order": 73,
+            "markdownDescription": "%settings.aiMonthlyLimitUsd.description%"
+          },
           "memobox.ai": {
             "type": "object",
             "default": {
@@ -626,7 +653,10 @@
                   "model": "qwen3:1.7b",
                   "apiKeyEnv": "",
                   "tagLanguage": "auto",
-                  "timeoutMs": 300000
+                  "timeoutMs": 300000,
+                  "inputCostPer1kUsd": 0,
+                  "outputCostPer1kUsd": 0,
+                  "estimatedOutputTokens": 800
                 }
               },
               "network": {
@@ -636,7 +666,7 @@
                 "tlsCaCert": ""
               }
             },
-            "order": 71,
+            "order": 74,
             "markdownDescription": "%settings.ai.description%"
           }
         }

@@ -185,6 +185,16 @@ API keys are resolved in this order:
 
 For OpenAI-style profiles, SecretStorage or environment variables are preferred over direct settings JSON.
 
+Set an API key with SecretStorage:
+
+1. Enable `memobox.aiEnabled`.
+2. Configure `memobox.ai` with the profile you want to use.
+3. Open the Command Palette and run `MemoBox: AI Set API Key`.
+4. Choose the target profile.
+5. Paste the API key and confirm.
+
+The stored key does not appear in `settings.json`. To remove it, run `MemoBox: AI Clear Stored API Key`.
+
 ## Logging
 
 MemoBox writes to two VS Code output channels:

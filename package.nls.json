@@ -65,5 +65,8 @@
   "settings.locale.description": "UI language used by MemoBox. `auto` follows the VS Code display language.",
   "settings.logLevel.description": "Log verbosity for the MemoBox and MemoBox AI output channels. `warn` is the default and keeps warnings and errors, `info` records normal operations, and `off` disables output.",
   "settings.aiEnabled.description": "Enable MemoBox AI features. When disabled, AI commands are hidden from command menus and the command palette.",
-  "settings.ai.description": "Structured AI configuration. Use profiles for provider-specific settings. Prefer VS Code SecretStorage first, then `apiKeyEnv`. Keep `apiKey` only for legacy compatibility."
+  "settings.aiCostMode.description": "How MemoBox handles estimated AI costs. `off` disables estimates, `estimateOnly` shows an estimate, `confirmHighCost` asks before expensive requests, `softCap` warns when limits are exceeded, and `hardCap` blocks execution.",
+  "settings.aiPerRequestLimitUsd.description": "Per-request estimated USD threshold used by `confirmHighCost`, `softCap`, and `hardCap`. `0` disables the threshold.",
+  "settings.aiMonthlyLimitUsd.description": "Monthly estimated USD threshold used by `softCap` and `hardCap`. `0` disables the threshold.",
+  "settings.ai.description": "Structured AI configuration. Use profiles for provider-specific settings. Prefer VS Code SecretStorage first, then `apiKeyEnv`. Keep `apiKey` only for legacy compatibility. Optional pricing fields include `inputCostPer1kUsd`, `outputCostPer1kUsd`, and `estimatedOutputTokens`."
 }

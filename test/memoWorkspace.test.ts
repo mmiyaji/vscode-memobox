@@ -26,8 +26,8 @@ test("buildMemoWorkspaceContent writes memobox settings and recommendations", ()
 
   assert.equal(parsed.folders[0]?.name, "MemoBox");
   assert.equal(parsed.settings["memobox.adminOpenOnStartup"], true);
-  assert.equal(parsed.settings["memobox.templatesDir"], normalize("/memo/root/.templates"));
-  assert.equal(parsed.settings["memobox.snippetsDir"], normalize("/memo/root/.snippets"));
+  assert.equal(parsed.settings["memobox.templatesDir"], normalize("/memo/root/.vscode-memobox/templates"));
+  assert.equal(parsed.settings["memobox.snippetsDir"], normalize("/memo/root/.vscode-memobox/snippets"));
   assert.deepEqual(parsed.extensions.recommendations, [
     "mmiyaji.vscode-memobox",
     "yzhang.markdown-all-in-one"

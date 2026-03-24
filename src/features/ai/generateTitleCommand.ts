@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { setFrontmatterScalar, updateFirstHeading } from "../../core/memo/frontmatterEdit";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, parseJsonStringArray, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, parseJsonStringArray, runAiPromptWithGuards } from "./shared";
 
 export async function generateAiTitleCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -21,12 +20,7 @@ export async function generateAiTitleCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const rawTitles = await runAiWithProgress("MemoBox: Generating title candidates...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const rawTitles = await runAiPromptWithGuards("MemoBox: Generating title candidates...", ai, prompt);
   if (!rawTitles) {
     return;
   }

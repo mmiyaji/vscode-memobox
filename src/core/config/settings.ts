@@ -3,6 +3,9 @@ import type { MemoBoxSettings } from "./types";
 import {
   configurationSection,
   defaultAiSettings,
+  defaultAiCostMode,
+  defaultAiMonthlyLimitUsd,
+  defaultAiPerRequestLimitUsd,
   defaultDatePathFormat,
   defaultExcludeDirectories,
   defaultGrepViewMode,
@@ -57,6 +60,15 @@ export function readSettings(): MemoBoxSettings {
     locale: readCompatibleSetting(config, "locale", "auto", ["memoDisplayLanguage"]),
     logLevel: readCompatibleSetting(config, "logLevel", defaultLogLevel),
     aiEnabled: readCompatibleSetting(config, "aiEnabled", false),
+    aiCostMode: normalizeAiCostMode(readCompatibleSetting(config, "aiCostMode", defaultAiCostMode)),
+    aiPerRequestLimitUsd: normalizeNonNegativeNumber(
+      readCompatibleSetting(config, "aiPerRequestLimitUsd", defaultAiPerRequestLimitUsd),
+      defaultAiPerRequestLimitUsd
+    ),
+    aiMonthlyLimitUsd: normalizeNonNegativeNumber(
+      readCompatibleSetting(config, "aiMonthlyLimitUsd", defaultAiMonthlyLimitUsd),
+      defaultAiMonthlyLimitUsd
+    ),
     ai: readAiSettings(config)
   };
 }
@@ -102,6 +114,20 @@ function normalizeRecentCount(value: number): number {
 
 function normalizePositiveCount(value: number, fallback: number): number {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+}
+
+function normalizeNonNegativeNumber(value: number, fallback: number): number {
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function normalizeAiCostMode(value: string) {
+  return value === "off"
+    || value === "estimateOnly"
+    || value === "confirmHighCost"
+    || value === "softCap"
+    || value === "hardCap"
+    ? value
+    : defaultAiCostMode;
 }
 
 function readListDisplayExtname(value: readonly string[]): readonly string[] {

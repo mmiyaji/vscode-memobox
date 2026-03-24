@@ -74,9 +74,9 @@ export function getDefaultWorkspaceName(): string {
 }
 
 export function getWorkspaceTemplatesDirectory(memodir: string): string {
-  return normalize(join(memodir, ".templates"));
+  return normalize(join(memodir, ".vscode-memobox", "templates"));
 }
 
 export function getWorkspaceSnippetsDirectory(memodir: string): string {
-  return normalize(join(memodir, ".snippets"));
+  return normalize(join(memodir, ".vscode-memobox", "snippets"));
 }

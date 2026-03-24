@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { setFrontmatterScalar } from "../../core/memo/frontmatterEdit";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress, unwrapAiTextResponse } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiPromptWithGuards, unwrapAiTextResponse } from "./shared";
 
 export async function summarizeMemoCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -21,12 +20,7 @@ export async function summarizeMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const rawSummary = await runAiWithProgress("MemoBox: Generating summary...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const rawSummary = await runAiPromptWithGuards("MemoBox: Generating summary...", ai, prompt);
   if (!rawSummary) {
     return;
   }

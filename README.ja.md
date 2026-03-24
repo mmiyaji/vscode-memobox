@@ -2,6 +2,16 @@
 
 [English README](./README.md)
 
+## AI SecretStorage の設定手順
+
+1. `memobox.aiEnabled` を `true` にします。
+2. 使いたい profile を `memobox.ai` で設定します。
+3. コマンドパレットで `MemoBox: AI Set API Key` を実行します。
+4. 対象の profile を選択します。
+5. API キーを貼り付けて確定します。
+
+保存したキーは `settings.json` には出ません。削除したい場合は `MemoBox: AI Clear Stored API Key` を実行してください。
+
 MemoBox は、日次メモ運用向けの VS Code 拡張です。保守しやすい構造、実用的なメモ操作、そしてオプトインの AI 機能を重視しています。
 
 ## 現在の状態

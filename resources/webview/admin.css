@@ -13,6 +13,8 @@
         --danger: var(--vscode-errorForeground);
         --warning: var(--vscode-editorWarning-foreground);
         --success: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+        --bar-bg: color-mix(in srgb, var(--button-bg) 18%, transparent);
+        --bar-fill: var(--button-bg);
         font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
       }
 
@@ -42,6 +44,8 @@
         margin: 0 auto;
         padding: 16px;
       }
+
+      /* ── Warning Banner ── */
 
       .warning-banner,
       .overview,
@@ -73,15 +77,17 @@
         font-size: 12px;
       }
 
+      /* ── Overview / Hero ── */
+
       .overview {
         padding: 16px;
       }
 
-      .overview-head {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: minmax(0, 1.25fr) minmax(280px, 1fr);
-        align-items: start;
+      .overview-header {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
       }
 
       .eyebrow {
@@ -124,17 +130,22 @@
         line-height: 1.5;
       }
 
+      /* ── KPI Summary Cards (top row) ── */
+
       .summary-grid {
         display: grid;
         gap: 10px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        margin-top: 14px;
       }
 
       .summary-card {
-        padding: 12px;
+        padding: 14px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
         background: var(--surface-bg);
+        display: flex;
+        flex-direction: column;
       }
 
       .summary-card-head,
@@ -151,7 +162,7 @@
       .section-label {
         display: block;
         color: var(--muted);
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.06em;
       }
@@ -159,17 +170,23 @@
       .summary-value {
         display: block;
         margin-top: 10px;
-        font-size: 20px;
-        font-weight: 600;
-        line-height: 1.2;
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
       }
 
       .summary-detail {
         display: block;
-        margin-top: 8px;
-        line-height: 1.5;
+        margin-top: auto;
+        padding-top: 10px;
+        font-size: 12px;
+        line-height: 1.45;
         overflow-wrap: anywhere;
+        color: var(--muted);
       }
+
+      /* ── Status Badge / Dot ── */
 
       .status-badge {
         display: inline-flex;
@@ -178,7 +195,7 @@
         padding: 2px 8px;
         border: 1px solid var(--panel-border);
         border-radius: 999px;
-        font-size: 12px;
+        font-size: 11px;
         white-space: nowrap;
       }
 
@@ -200,6 +217,8 @@
       .status-dot-danger {
         background: var(--danger);
       }
+
+      /* ── Toolbar ── */
 
       .toolbar {
         display: grid;
@@ -276,6 +295,8 @@
         cursor: not-allowed;
       }
 
+      /* ── Content Grid ── */
+
       .content-grid {
         display: grid;
         gap: 12px;
@@ -312,6 +333,8 @@
         font-size: 12px;
       }
 
+      /* ── List containers ── */
+
       .kv-grid,
       .asset-list,
       .recent-list,
@@ -336,7 +359,7 @@
 
       .kv-row,
       .asset-row,
-      .folder-row,
+      .folder-row-container,
       .item-card {
         padding: 12px;
         border: 1px solid var(--panel-border);
@@ -376,6 +399,8 @@
       .setting-choice input {
         margin: 0;
       }
+
+      /* ── Memo item cards ── */
 
       .item-card {
         display: grid;
@@ -437,6 +462,8 @@
         border-top: 1px solid var(--panel-border);
       }
 
+      /* ── Folder / Tag rows with progress bar ── */
+
       .folder-row {
         align-items: center;
       }
@@ -450,7 +477,83 @@
         display: inline-flex;
         gap: 8px;
         white-space: nowrap;
+        font-variant-numeric: tabular-nums;
       }
+
+      .folder-bar-track {
+        width: 100%;
+        height: 6px;
+        margin-top: 8px;
+        border-radius: 3px;
+        background: var(--bar-bg);
+        overflow: hidden;
+      }
+
+      .folder-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: var(--bar-fill);
+        transition: width 300ms ease;
+      }
+
+      /* ── AI Usage Section ── */
+
+      .ai-usage-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .ai-usage-card {
+        padding: 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        background: var(--surface-bg);
+        text-align: center;
+      }
+
+      .ai-usage-value {
+        display: block;
+        margin-top: 6px;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ai-usage-label {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .ai-config-grid {
+        display: grid;
+        gap: 6px;
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .ai-config-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+
+      .ai-config-key {
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+
+      .ai-config-val {
+        overflow-wrap: anywhere;
+      }
+
+      /* ── Empty state ── */
 
       .empty-copy {
         margin: 0;
@@ -469,10 +572,28 @@
         color: var(--danger);
       }
 
+      /* ── Responsive ── */
+
       @media (max-width: 960px) {
-        .overview-head,
-        .content-grid,
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+
         .summary-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .ai-usage-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .ai-usage-grid {
           grid-template-columns: 1fr;
         }
       }

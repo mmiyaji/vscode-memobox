@@ -131,7 +131,7 @@ function renderWorkspaceStep(model: SetupViewModel, ui: MemoBoxUiText): string {
       </section>
       <section class="info-card">
         <span class="label">${escapeHtml(text.includedSettings)}</span>
-        <span class="value"><code>memobox.adminOpenOnStartup</code><br /><code>memobox.templatesDir = .templates</code><br /><code>memobox.snippetsDir = .snippets</code></span>
+        <span class="value"><code>memobox.adminOpenOnStartup</code><br /><code>memobox.templatesDir = ${escapeHtml(model.metaDir)}/templates</code><br /><code>memobox.snippetsDir = ${escapeHtml(model.metaDir)}/snippets</code></span>
       </section>
       <section class="info-card">
         <span class="label">${escapeHtml(text.recommendations)}</span>

@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import { dirname } from "node:path";
 import { format } from "date-fns";
+import { defaultAiCostMode, defaultAiMonthlyLimitUsd, defaultAiPerRequestLimitUsd } from "../../core/config/constants";
 import type { MemoBoxSettings } from "../../core/config/types";
 import {
   getIndexFilePath,
@@ -16,6 +17,7 @@ import {
   listSnippetAssets,
   listTemplateAssets
 } from "../../core/meta/memoAssets";
+import { readAiUsageMonthSummary } from "../../infra/ai/usageLedger";
 import { readPinnedMemoRelativePaths } from "../../core/meta/pinnedMemos";
 import { assessMemoRootScope, type MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import { areSameMemoPaths, getMemoDateDirectory, getPreferredTemplatePath, getQuickMemoFilePath } from "../../core/memo/pathing";
@@ -50,6 +52,9 @@ export interface AdminDashboardModel {
   readonly templates: readonly AdminTemplateAsset[];
   readonly snippets: readonly AdminSnippetAsset[];
   readonly aiEnabled: boolean;
+  readonly aiCostMode: string;
+  readonly aiPerRequestLimitUsd: number;
+  readonly aiMonthlyLimitUsd: number;
   readonly aiConfigured: boolean;
   readonly aiProfileName: string;
   readonly aiProvider: string;
@@ -57,6 +62,8 @@ export interface AdminDashboardModel {
   readonly aiEndpoint: string;
   readonly aiApiKeySource: MemoBoxAiApiKeySource;
   readonly aiIssueSummary: string;
+  readonly aiMonthlyEstimatedCostUsd: number;
+  readonly aiMonthlyRequestCount: number;
   readonly totalFiles: number;
   readonly latestUpdatedAtLabel: string;
   readonly indexFilePath: string;
@@ -136,6 +143,16 @@ export async function buildAdminDashboardModel(
   const templatesDirectoryReady = memoRootReady ? await isExistingDirectory(templatesDirectory) : false;
   const snippetsDirectoryReady = memoRootReady ? await isExistingDirectory(snippetsDirectory) : false;
   const ai = await resolveMemoBoxAiConfigurationWithSecrets(settings);
+  const aiUsage = memoRootReady
+    ? await readAiUsageMonthSummary(settings, now)
+    : {
+        periodKey: "",
+        estimatedCostUsd: 0,
+        requests: 0,
+        promptTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0
+      };
   const memoRootAssessment = assessMemoRootScope(settings.memodir);
   const recommendedMemoRoot = getRecommendedMemoRoot();
 
@@ -166,6 +183,9 @@ export async function buildAdminDashboardModel(
     templates: buildAdminTemplateAssets(templateAssets, settings),
     snippets: buildAdminSnippetAssets(snippetAssets),
     aiEnabled: ai.enabled,
+    aiCostMode: settings.aiCostMode ?? defaultAiCostMode,
+    aiPerRequestLimitUsd: settings.aiPerRequestLimitUsd ?? defaultAiPerRequestLimitUsd,
+    aiMonthlyLimitUsd: settings.aiMonthlyLimitUsd ?? defaultAiMonthlyLimitUsd,
     aiConfigured: ai.configured,
     aiProfileName: ai.profileName,
     aiProvider: ai.profile?.provider ?? "",
@@ -173,6 +193,8 @@ export async function buildAdminDashboardModel(
     aiEndpoint: ai.profile?.endpoint ?? "",
     aiApiKeySource: ai.profile?.apiKeySource ?? "none",
     aiIssueSummary: ai.issues.join(" "),
+    aiMonthlyEstimatedCostUsd: aiUsage.estimatedCostUsd,
+    aiMonthlyRequestCount: aiUsage.requests,
     totalFiles: entries.length,
     latestUpdatedAtLabel: getLatestUpdatedAtLabel(entries),
     indexFilePath,

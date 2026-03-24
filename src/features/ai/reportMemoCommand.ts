@@ -4,8 +4,7 @@ import { format } from "date-fns";
 import { readSettings } from "../../core/config/settings";
 import { getMemoIndexEntries, type MemoIndexedEntry } from "../../core/index/memoIndex";
 import { ensureMemoRoot } from "../../core/memo/workspace";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, runAiWithProgress, unwrapAiTextResponse } from "./shared";
+import { ensureAiReady, runAiPromptWithGuards, unwrapAiTextResponse } from "./shared";
 import { resolveReportStartDate, type ReportRangeValue } from "./support";
 
 interface ReportRangeOption {
@@ -66,12 +65,7 @@ export async function reportMemoCommand(): Promise<void> {
     memoSections.join("\n\n")
   ].join("\n");
 
-  const report = await runAiWithProgress("MemoBox: Generating AI report...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const report = await runAiPromptWithGuards("MemoBox: Generating AI report...", ai, prompt);
   if (!report) {
     return;
   }

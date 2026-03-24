@@ -3,6 +3,7 @@ export type MemoListSortOrder = "filename" | "mtime" | "birthtime";
 export type MemoGrepViewMode = "quickPick" | "outputChannel" | "both" | "readOnlyDocument" | "editableDocument";
 export type MemoBoxAiProvider = "ollama" | "openai";
 export type MemoBoxLogLevel = "off" | "error" | "warn" | "info";
+export type MemoBoxAiCostMode = "off" | "estimateOnly" | "confirmHighCost" | "softCap" | "hardCap";
 
 export interface MemoBoxAiProfileSettings {
   readonly provider: MemoBoxAiProvider;
@@ -12,6 +13,9 @@ export interface MemoBoxAiProfileSettings {
   readonly apiKeyEnv: string;
   readonly tagLanguage: MemoBoxLocale;
   readonly timeoutMs: number;
+  readonly inputCostPer1kUsd?: number;
+  readonly outputCostPer1kUsd?: number;
+  readonly estimatedOutputTokens?: number;
 }
 
 export interface MemoBoxAiNetworkSettings {
@@ -54,5 +58,8 @@ export interface MemoBoxSettings {
   readonly locale: MemoBoxLocale;
   readonly logLevel: MemoBoxLogLevel;
   readonly aiEnabled: boolean;
+  readonly aiCostMode?: MemoBoxAiCostMode;
+  readonly aiPerRequestLimitUsd?: number;
+  readonly aiMonthlyLimitUsd?: number;
   readonly ai: MemoBoxAiSettings;
 }

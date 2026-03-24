@@ -4,9 +4,8 @@ import { basename, dirname, extname, relative } from "node:path";
 import { getMemoIndexEntries } from "../../core/index/memoIndex";
 import { readSettings } from "../../core/config/settings";
 import { ensureMemoRoot } from "../../core/memo/workspace";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
 import { areSameFilePath } from "../../shared/filePathComparison";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiPromptWithGuards } from "./shared";
 import { parseLinkSuggestions } from "./support";
 
 export async function linkSuggestCommand(): Promise<void> {
@@ -56,12 +55,7 @@ export async function linkSuggestCommand(): Promise<void> {
     candidateSummaries.join("\n")
   ].join("\n");
 
-  const rawSuggestions = await runAiWithProgress("MemoBox: Suggesting memo links...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const rawSuggestions = await runAiPromptWithGuards("MemoBox: Suggesting memo links...", ai, prompt);
   if (!rawSuggestions) {
     return;
   }

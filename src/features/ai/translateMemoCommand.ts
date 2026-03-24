@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import { runMemoBoxAiPrompt } from "../../infra/ai/client";
-import { ensureAiReady, getActiveMarkdownAiContext, runAiWithProgress, unwrapAiTextResponse } from "./shared";
+import { ensureAiReady, getActiveMarkdownAiContext, runAiPromptWithGuards, unwrapAiTextResponse } from "./shared";
 
 export async function translateMemoCommand(): Promise<void> {
   const ai = await ensureAiReady();
@@ -39,12 +38,7 @@ export async function translateMemoCommand(): Promise<void> {
     "---"
   ].join("\n");
 
-  const translated = await runAiWithProgress("MemoBox: Translating with AI...", async (signal, progress) => {
-    progress.report({ message: "Sending request..." });
-    const response = await runMemoBoxAiPrompt(ai.resolved, prompt, { signal });
-    progress.report({ message: "Processing response..." });
-    return response;
-  });
+  const translated = await runAiPromptWithGuards("MemoBox: Translating with AI...", ai, prompt);
   if (!translated) {
     return;
   }
