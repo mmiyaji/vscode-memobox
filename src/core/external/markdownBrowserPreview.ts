@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, extname, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { extname, join, posix, win32 } from "node:path";
 import MarkdownIt from "markdown-it";
 
 const previewDirectoryName = "memobox";
@@ -45,7 +44,7 @@ export async function writeMarkdownBrowserPreview(document: MarkdownPreviewDocum
 }
 
 export function renderMarkdownBrowserPreviewHtml(document: Pick<MarkdownPreviewDocument, "getText" | "fileName" | "uri">): string {
-  const title = basename(document.fileName || "Markdown Preview");
+  const title = getPathModule(document.fileName || "").basename(document.fileName || "Markdown Preview");
   const sourceDirectory = getSourceDirectoryHref(document.uri);
   const { frontmatter, markdownBody } = splitFrontmatter(document.getText());
   const renderedMarkdown = markdownRenderer.render(markdownBody);
@@ -209,7 +208,7 @@ export function renderMarkdownBrowserPreviewHtml(document: Pick<MarkdownPreviewD
 }
 
 function getDocumentSlug(document: Pick<MarkdownPreviewDocument, "fileName" | "uri">): string {
-  const fileName = basename(document.fileName || "untitled");
+  const fileName = getPathModule(document.fileName || "").basename(document.fileName || "untitled");
   const normalized = fileName.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   const suffix = document.uri.scheme === "file" ? "" : `-${document.uri.scheme}`;
 
@@ -247,7 +246,14 @@ function getSourceDirectoryHref(uri: UriLike): string {
     return "";
   }
 
-  return pathToFileURL(dirname(uri.fsPath)).toString();
+  const directoryPath = getPathModule(uri.fsPath).dirname(uri.fsPath);
+  const normalizedDirectoryPath = isWindowsLikePath(directoryPath)
+    ? directoryPath.replaceAll("\\", "/")
+    : directoryPath;
+  const fileUrl = new URL("file:///");
+
+  fileUrl.pathname = normalizedDirectoryPath.startsWith("/") ? normalizedDirectoryPath : `/${normalizedDirectoryPath}`;
+  return fileUrl.toString();
 }
 
 function escapeHtml(value: string): string {
@@ -257,4 +263,12 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function getPathModule(filePath: string): typeof win32 | typeof posix {
+  return isWindowsLikePath(filePath) ? win32 : posix;
+}
+
+function isWindowsLikePath(filePath: string): boolean {
+  return /^[a-zA-Z]:[\\/]/u.test(filePath) || filePath.includes("\\");
 }
