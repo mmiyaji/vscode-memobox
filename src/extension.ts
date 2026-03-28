@@ -132,6 +132,10 @@ export function activate(context: vscode.ExtensionContext): void {
     setTimeout(() => {
       openAdmin(context);
     }, 400);
+  }).catch((error: unknown) => {
+    logMemoBoxInfo("extension", "Failed to check memo root readiness.", {
+      message: error instanceof Error ? error.message : String(error)
+    });
   });
 }
 

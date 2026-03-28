@@ -66,7 +66,14 @@ export async function findTodoMemos(
   return { matches: results, truncated: false, cancelled: false, skippedFiles };
 }
 
+const defaultTodoPattern = "^.*@todo.*?:";
+
 export function createTodoRegExp(pattern: string): RegExp {
   const normalizedPattern = pattern.trim();
-  return new RegExp(normalizedPattern === "" ? "^.*@todo.*?:" : normalizedPattern, "iu");
+  const source = normalizedPattern === "" ? defaultTodoPattern : normalizedPattern;
+  try {
+    return new RegExp(source, "iu");
+  } catch {
+    return new RegExp(defaultTodoPattern, "iu");
+  }
 }

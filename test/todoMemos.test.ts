@@ -98,6 +98,8 @@ test("findTodoMemos supports scoped search", async () => {
   }
 });
 
-test("createTodoRegExp throws for invalid regular expressions", () => {
-  assert.throws(() => createTodoRegExp("("), /Invalid regular expression/);
+test("createTodoRegExp falls back to the default pattern for invalid regular expressions", () => {
+  const regexp = createTodoRegExp("(");
+  assert.ok(regexp instanceof RegExp);
+  assert.ok(regexp.test("@todo: something"));
 });
