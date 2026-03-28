@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { normalize } from "node:path";
 import {
   buildCustomPageAllowedRoots,
   isAllowedCustomPageCommand,
@@ -21,9 +22,9 @@ test("buildCustomPageAllowedRoots includes memo root, current page directory, an
   );
 
   assert.deepEqual(roots, [
-    "C:\\memo",
-    "C:\\memo\\.vscode-memobox\\pages",
-    "C:\\workspace\\.vscode-memobox\\pages"
+    normalize("C:/memo"),
+    normalize("C:/memo/.vscode-memobox/pages"),
+    normalize("C:/workspace/.vscode-memobox/pages")
   ]);
 });
 
