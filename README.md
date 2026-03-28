@@ -6,9 +6,10 @@ MemoBox is a VS Code extension for daily memo workflows. It focuses on a maintai
 
 ## Status
 
-- Release line: `0.1.x`
-- Current focus: stability, maintainability, and release readiness
-MemoBox is already usable as a daily memo tool. The remaining `0.1.x` work is mostly UX polish, resilience, and packaging quality rather than broad feature churn.
+- Current release: `0.1.0`
+- Positioning: initial public release
+
+MemoBox `0.1.0` is intended to be a usable daily memo extension for VS Code with a stable core workflow, built-in setup/admin surfaces, incremental indexing, and an optional AI layer.
 
 ## Screenshots
 
@@ -46,7 +47,9 @@ AI title assist:
 - Quick append into today's memo
 - List/Edit, tag browse, grep, todo extraction, and related memo discovery
 - Relative memo link insertion and Markdown link completion
-- Admin dashboard, Setup flow, and workspace-file generation
+- Backlink lookup and `[[memo]]` open-or-create flow
+- Markdown slash commands, table formatting, and footnote helpers
+- Admin dashboard, Setup flow, workspace-file generation, and custom pages
 - Persisted memo index with backup recovery, incremental updates, and maintenance commands
 - Template and snippet scaffolding from bundled resources
 - Localized command titles, settings, Admin UI, and Setup UI
@@ -62,11 +65,15 @@ Core commands:
 - `MemoBox: List/Edit`
 - `MemoBox: Browse Tags`
 - `MemoBox: Insert Memo Link`
+- `MemoBox: Show Backlinks`
+- `MemoBox: Open or Create [[memo]]`
 - `MemoBox: Grep`
 - `MemoBox: Todo`
 - `MemoBox: Related Memos`
 - `MemoBox: Re:Date`
 - `MemoBox: Open Markdown In Browser`
+- `MemoBox: Format Markdown Table`
+- `MemoBox: Insert Footnote`
 
 Setup and maintenance:
 
@@ -80,6 +87,7 @@ Setup and maintenance:
 - `MemoBox Admin: Clear Index Cache`
 - `MemoBox Admin: Show Logs`
 - `MemoBox Admin: Show AI Logs`
+- `MemoBox: Open Custom Page`
 
 AI commands, hidden by default until `memobox.aiEnabled` is enabled:
 
@@ -109,6 +117,14 @@ Default keybindings:
 `MemoBox: Today's Quick Memo` appends a timestamped block to today's memo. `titlePrefix` and `dateFormat` control the inserted heading format.
 
 `MemoBox: Insert Memo Link` inserts a relative Markdown link to another memo. Link completion also works while typing `[[...` or a Markdown link target like `[Label](`, and it tolerates small typos in longer queries.
+
+`MemoBox: Show Backlinks` lists memos that already point to the active memo and jumps to the matching line. `MemoBox: Open or Create [[memo]]` resolves the wiki-style link under the cursor, replacing it with a relative Markdown link and creating a new dated memo when no exact match exists.
+
+MemoBox also adds lightweight Markdown authoring helpers:
+
+- Slash commands in Markdown when typing `/`
+- `MemoBox: Format Markdown Table` for the selected pipe table
+- `MemoBox: Insert Footnote` to insert a numbered footnote reference and append the matching definition
 
 ## Command Launcher
 
@@ -152,14 +168,16 @@ This index powers:
 - Memo link insertion and completion
 - Admin summaries
 
-## Admin and Setup
+## Admin, Setup, and Custom Pages
 
-MemoBox uses two separate webviews:
+MemoBox uses two built-in webviews and supports user-authored custom pages:
 
 - `Setup`
   Used for first-run and repair flows. It stores `memobox.memodir` globally first, then optionally creates a `.code-workspace` file.
 - `Admin`
-  Used as an operational dashboard for recent files, pinned files, tags, templates, snippets, AI status, logs, and index state.
+  Used as an operational dashboard for recent files, pinned files, tags, templates, snippets, AI status, logs, and index state. Custom page links appear in the Admin panel when pages are available.
+- `Custom Pages`
+  User-authored HTML pages placed in `.vscode-memobox/pages/`. Each page opens in its own independent webview panel. Pages support template variables (`{{VERSION}}`, `{{MEMO_ROOT}}`, `{{TOTAL_FILES}}`, etc.) and loop blocks (`{{#each RECENT_FILES}}...{{/each}}`). Pages can also be opened from the Command Palette via `MemoBox: Open Custom Page`.
 
 The Admin dashboard can also toggle `memobox.adminOpenOnStartup`.
 

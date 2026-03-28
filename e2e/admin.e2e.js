@@ -1,4 +1,4 @@
-const { access, readFile, readdir } = require("node:fs/promises");
+const { access, readFile, readdir, writeFile } = require("node:fs/promises");
 const { join } = require("node:path");
 const { test, expect } = require("@playwright/test");
 const {
@@ -6,6 +6,7 @@ const {
   fillQuickInput,
   launchMemoBoxAdminForE2E,
   openCommandPalette,
+  runCommand,
   openSettingsUi,
   pickQuickInputItem,
   waitForAdminFrame,
@@ -56,6 +57,118 @@ test("Admin renders memo state and supports pin/unpin from recent files", async 
     await expect(
       refreshedFrame.locator("[data-testid='admin-open-on-startup-setting'] input[value='false']")
     ).toBeChecked();
+  } finally {
+    await app.dispose();
+  }
+});
+
+async function runAlignCsvInEditor(app, csvPath, inputLines) {
+  await writeFile(csvPath, inputLines.join("\n"), "utf8");
+
+  const explorerFile = app.window
+    .locator(".explorer-folders-view .monaco-list-row")
+    .filter({ hasText: "table.md" })
+    .first();
+  await explorerFile.waitFor({ state: "visible", timeout: 30_000 });
+  await explorerFile.dblclick();
+  await app.window.waitForTimeout(1_200);
+
+  const editorLines = app.window.locator(".view-lines").first();
+  await editorLines.click({ position: { x: 80, y: 60 } });
+  await app.window.keyboard.press("Control+A");
+  await editorLines.click({ button: "right", position: { x: 120, y: 40 } });
+  await app.window.locator(".monaco-menu .action-menu-item").filter({ hasText: "MemoBox" }).first().click();
+  const alignMenuItem = app.window
+    .locator(".monaco-menu .action-menu-item")
+    .filter({ hasText: "Align Selected CSV Columns" })
+    .first();
+  await alignMenuItem.waitFor({ state: "visible", timeout: 30_000 });
+  await alignMenuItem.hover();
+  await app.window.keyboard.press("Enter");
+  await app.window.waitForTimeout(1_200);
+  await app.window.keyboard.press("Control+S");
+  await app.window.waitForTimeout(900);
+
+  return await readFile(csvPath, "utf8");
+}
+
+test("Align Selected CSV Columns rewrites the selected text in the editor", async () => {
+  const app = await launchMemoBoxAdminForE2E({
+    adminOpenOnStartup: false
+  });
+
+  try {
+    const csvPath = join(app.workspaceDir, "table.md");
+    const longMultibyteValue = "\u3042".repeat(10) + "305";
+    const updated = await runAlignCsvInEditor(app, csvPath, [
+      "id,name,status,owner",
+      "1,alpha,open,mmiyaji",
+      "22,beta,closed,satokaz",
+      `${longMultibyteValue},gamma,in review,team-a`
+    ]);
+
+    expect(updated).toBe(
+      [
+        "id,                      name,  status,    owner",
+        "1,                       alpha, open,      mmiyaji",
+        "22,                      beta,  closed,    satokaz",
+        `${longMultibyteValue}, gamma, in review, team-a`
+      ].join("\n")
+    );
+  } finally {
+    await app.dispose();
+  }
+});
+
+test("Align CSV handles long CJK text in the middle column", async () => {
+  const app = await launchMemoBoxAdminForE2E({
+    adminOpenOnStartup: false
+  });
+
+  try {
+    const csvPath = join(app.workspaceDir, "table.md");
+    const updated = await runAlignCsvInEditor(app, csvPath, [
+      "\u3042id,name,status,owner",
+      "1,alpha,op\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042en,mmiyaji",
+      "22,beta,\u3046\u304A\u304A\u304A\u304A\u304A\u304A\u304A\u304A\u304A\u304Aclosed,satokaz",
+      "\u3042\u3042\u3042\u3042\u304230,gamma,in review,team-a"
+    ]);
+
+    expect(updated).toBe(
+      [
+        "\u3042id,         name,  status,                                     owner",
+        "1,            alpha, op\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3042en, mmiyaji",
+        "22,           beta,  \u3046\u304A\u304A\u304A\u304A\u304A\u304A\u304A\u304A\u304A\u304Aclosed,               satokaz",
+        "\u3042\u3042\u3042\u3042\u304230, gamma, in review,                                  team-a"
+      ].join("\n")
+    );
+  } finally {
+    await app.dispose();
+  }
+});
+
+test("Align CSV handles long CJK text in the first column", async () => {
+  const app = await launchMemoBoxAdminForE2E({
+    adminOpenOnStartup: false
+  });
+
+  try {
+    const csvPath = join(app.workspaceDir, "table.md");
+    const updated = await runAlignCsvInEditor(app, csvPath, [
+      "\u3042id,name,status,owner",
+      "1,alpha,open,mmiyaji",
+      "22,beta,closed,satokaz",
+      "\u3042\u3042\u3042\u3042\u3042305,gamma,in review,team-a"
+    ]);
+
+    expect(updated).toBe(
+      [
+        "\u3042id,          name,  status,    owner",
+        "1,             alpha, open,      mmiyaji",
+        "22,            beta,  closed,    satokaz",
+        "\u3042\u3042\u3042\u3042\u3042305, gamma, in review, team-a"
+      ].join("\n")
+    );
   } finally {
     await app.dispose();
   }
@@ -157,9 +270,9 @@ test("Settings UI shows grouped MemoBox sections", async () => {
 
   try {
     await openSettingsUi(app.window);
-    await app.window.waitForTimeout(1000);
+    await app.window.waitForTimeout(1_000);
     await app.window.keyboard.type("@ext:mmiyaji.vscode-memobox");
-    await app.window.waitForTimeout(1000);
+    await app.window.waitForTimeout(1_000);
 
     await expect(app.window.locator("text=Core Paths").first()).toBeVisible();
     await expect(app.window.locator("text=Templates & Metadata").first()).toBeVisible();

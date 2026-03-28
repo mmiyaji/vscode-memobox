@@ -33,6 +33,7 @@ function createSettings(overrides: Partial<MemoBoxSettings> = {}): MemoBoxSettin
     memoNewFilenameDateSuffix: "",
     locale: "auto",
     logLevel: "info",
+    slashCommandsEnabled: true,
     aiEnabled: false,
     ai: {
       defaultProfile: "local",
@@ -84,19 +85,20 @@ test("buildNewMemoTemplateSelectionPlan auto-selects a single non-default templa
 });
 
 test("buildNewMemoTemplateSelectionPlan keeps the default flow for a lone default template", () => {
-  const plan = buildNewMemoTemplateSelectionPlan(createSettings(), [createTemplateAsset("simple.md")]);
+  const plan = buildNewMemoTemplateSelectionPlan(createSettings(), [createTemplateAsset("daily.md")]);
 
   assert.equal(plan.mode, "default");
 });
 
 test("buildNewMemoTemplateSelectionPlan prompts when multiple templates exist", () => {
   const plan = buildNewMemoTemplateSelectionPlan(createSettings(), [
+    createTemplateAsset("daily.md"),
     createTemplateAsset("simple.md"),
     createTemplateAsset("meeting.md")
   ]);
 
   assert.equal(plan.mode, "pick");
-  assert.equal(plan.options.length, 3);
+  assert.equal(plan.options.length, 4);
   assert.equal(plan.options[0]?.kind, "default");
   assert.equal(plan.options[1]?.isDefault, true);
   assert.equal(plan.options[2]?.isDefault, false);

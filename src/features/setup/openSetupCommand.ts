@@ -72,7 +72,7 @@ class MemoSetupPanel {
     const step = await this.resolveCurrentStep(settings.memodir, workspaceFileExists);
 
     this.panel.title = ui.setup.panelTitle(version);
-    this.panel.webview.html = renderSetupHtml(model, getNonce(), step, ui);
+    this.panel.webview.html = renderSetupHtml(model, getNonce(), step, ui, resolveUiLanguage(settings.locale));
   }
 
   private async handleMessage(message: unknown): Promise<void> {

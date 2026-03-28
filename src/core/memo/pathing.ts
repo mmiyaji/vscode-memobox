@@ -32,7 +32,7 @@ export function getQuickMemoFilePath(settings: MemoBoxSettings, date: Date): str
 }
 
 export function getDefaultTemplatePath(settings: Pick<MemoBoxSettings, "memodir" | "metaDir">): string {
-  return normalize(join(settings.memodir, settings.metaDir, "templates", "simple.md"));
+  return normalize(join(settings.memodir, settings.metaDir, "templates", "daily.md"));
 }
 
 export function getPreferredTemplatePath(

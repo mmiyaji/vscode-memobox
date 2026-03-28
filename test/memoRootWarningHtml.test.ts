@@ -1,10 +1,79 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { renderAdminHtml } from "../src/features/admin/adminHtml";
+import { buildCustomPageVariables, renderAdminHtml } from "../src/features/admin/adminHtml";
 import type { AdminDashboardModel } from "../src/features/admin/adminViewModel";
 import { renderSetupHtml } from "../src/features/setup/setupHtml";
 import type { SetupViewModel } from "../src/features/setup/setupViewModel";
 import type { MemoBoxUiText } from "../src/shared/uiText";
+import { applyTemplateVariables, extractTemplateKeys } from "../src/shared/webviewTemplate";
+import { resolveRequiredGroups } from "../src/features/pages/customPageDataGroups";
+
+test("applyTemplateVariables does not double-expand values containing template patterns", () => {
+  const result = applyTemplateVariables("Hello {{GREETING}}, version {{VERSION}}", {
+    GREETING: "Welcome to {{VERSION}}",
+    VERSION: "1.0.0"
+  });
+
+  assert.equal(result, "Hello Welcome to {{VERSION}}, version 1.0.0");
+});
+
+test("applyTemplateVariables leaves unknown variables intact", () => {
+  const result = applyTemplateVariables("{{KNOWN}} and {{UNKNOWN}}", {
+    KNOWN: "resolved"
+  });
+
+  assert.equal(result, "resolved and {{UNKNOWN}}");
+});
+
+test("applyTemplateVariables expands each loops", () => {
+  const result = applyTemplateVariables(
+    "<ul>{{#each ITEMS}}<li>{{.name}} ({{.count}})</li>{{/each}}</ul>",
+    {},
+    { ITEMS: [{ name: "alpha", count: 3 }, { name: "beta", count: 7 }] }
+  );
+
+  assert.equal(result, "<ul><li>alpha (3)</li><li>beta (7)</li></ul>");
+});
+
+test("applyTemplateVariables escapes loop item values", () => {
+  const result = applyTemplateVariables(
+    "{{#each ROWS}}<td>{{.label}}</td>{{/each}}",
+    {},
+    { ROWS: [{ label: "<script>alert(1)</script>" }] }
+  );
+
+  assert.equal(result, "<td>&lt;script&gt;alert(1)&lt;/script&gt;</td>");
+});
+
+test("applyTemplateVariables provides _index, _first, _last in loops", () => {
+  const result = applyTemplateVariables(
+    "{{#each ITEMS}}[{{._index}}:{{._first}}:{{._last}}]{{/each}}",
+    {},
+    { ITEMS: [{ x: "a" }, { x: "b" }, { x: "c" }] }
+  );
+
+  assert.equal(result, "[0:true:][1::][2::true]");
+});
+
+test("applyTemplateVariables renders empty string for unknown loop key", () => {
+  const result = applyTemplateVariables(
+    "before{{#each MISSING}}<li>{{.x}}</li>{{/each}}after",
+    {},
+    { OTHER: [{ x: "y" }] }
+  );
+
+  assert.equal(result, "beforeafter");
+});
+
+test("applyTemplateVariables combines loops and variables", () => {
+  const result = applyTemplateVariables(
+    "<h1>{{TITLE}}</h1>{{#each TAGS}}<span>{{.tag}}</span>{{/each}}",
+    { TITLE: "My Tags" },
+    { TAGS: [{ tag: "rust" }, { tag: "ts" }] }
+  );
+
+  assert.equal(result, "<h1>My Tags</h1><span>rust</span><span>ts</span>");
+});
 
 test("renderSetupHtml shows localized broad-root reasons", () => {
   const model: SetupViewModel = {
@@ -22,7 +91,7 @@ test("renderSetupHtml shows localized broad-root reasons", () => {
     memoRootRiskCodes: ["documents"]
   };
 
-  const html = renderSetupHtml(model, "nonce", "memoRoot", createEnglishUiText());
+  const html = renderSetupHtml(model, "nonce", "memoRoot", createEnglishUiText(), "en");
 
   assert.match(html, /Reasons: Documents/);
   assert.match(html, /Recommended: C:\/Users\/mail\/Documents\/MemoBox/);
@@ -79,13 +148,209 @@ test("renderAdminHtml shows localized broad-root reasons", () => {
     pinnedFiles: [],
     recentFiles: [],
     folderCounts: [],
-    topTags: []
+    topTags: [],
+    customPages: []
   };
 
   const html = renderAdminHtml(model, "nonce", createEnglishUiText());
 
   assert.match(html, /Reasons: Documents, Home/);
   assert.match(html, /Recommended: C:\/Users\/mail\/Documents\/MemoBox/);
+});
+
+test("renderAdminHtml shows custom page links", () => {
+  const model: AdminDashboardModel = {
+    version: "0.1.0",
+    generatedAtLabel: "2026-03-23 10:00",
+    memoRoot: "C:/Users/mail/Documents",
+    memoRootReady: true,
+    memoRootLooksBroad: false,
+    memoRootRiskCodes: [],
+    recommendedMemoRoot: "",
+    workspaceFilePath: "C:/Users/mail/Documents/MemoBox.code-workspace",
+    workspaceFileExists: false,
+    datePathFormat: "yyyy/MM",
+    metaDir: ".vscode-memobox",
+    locale: "en",
+    adminOpenOnStartup: true,
+    excludeDirectories: [],
+    maxScanDepth: 4,
+    todayDirectory: "C:/memo/2026/03",
+    todayMemoPath: "C:/memo/2026/03/2026-03-23.md",
+    templatePath: "C:/memo/.vscode-memobox/templates/simple.md",
+    hasExplicitTemplateOverride: false,
+    templatesDirectory: "C:/memo/.vscode-memobox/templates",
+    templatesDirectoryReady: true,
+    snippetsDirectory: "C:/memo/.vscode-memobox/snippets",
+    snippetsDirectoryReady: true,
+    templates: [],
+    snippets: [],
+    aiEnabled: false,
+    aiCostMode: "off",
+    aiPerRequestLimitUsd: 0,
+    aiMonthlyLimitUsd: 0,
+    aiConfigured: false,
+    aiProfileName: "",
+    aiProvider: "",
+    aiModel: "",
+    aiEndpoint: "",
+    aiApiKeySource: "none",
+    aiIssueSummary: "",
+    aiMonthlyEstimatedCostUsd: 0,
+    aiMonthlyRequestCount: 0,
+    totalFiles: 42,
+    latestUpdatedAtLabel: "2026-03-23",
+    indexFilePath: "index.json",
+    indexFileExists: true,
+    indexFileSizeLabel: "1 KB",
+    indexLoadSource: "primary",
+    indexBackupExists: false,
+    indexTransientBackupExists: false,
+    pinnedFiles: [],
+    recentFiles: [],
+    folderCounts: [],
+    topTags: [],
+    customPages: [
+      {
+        id: "my_page",
+        title: "My Custom Page",
+        htmlBody: "<h2>Hello</h2>",
+        absolutePath: "C:/test/my_page.html"
+      }
+    ]
+  };
+
+  const html = renderAdminHtml(model, "nonce", createEnglishUiText());
+
+  // Custom page link should appear
+  assert.match(html, /data-open-custom-page="C:\/test\/my_page\.html"/);
+  assert.match(html, /My Custom Page/);
+
+  // No tab-based elements
+  assert.doesNotMatch(html, /data-tab-id/);
+  assert.doesNotMatch(html, /tab-bar/);
+});
+
+test("buildCustomPageVariables expands model values for custom pages", () => {
+  const model: AdminDashboardModel = {
+    version: "2.0.0",
+    generatedAtLabel: "2026-03-25 12:00",
+    memoRoot: "C:/memo",
+    memoRootReady: true,
+    memoRootLooksBroad: false,
+    memoRootRiskCodes: [],
+    recommendedMemoRoot: "",
+    workspaceFilePath: "test.code-workspace",
+    workspaceFileExists: false,
+    datePathFormat: "yyyy/MM",
+    metaDir: ".vscode-memobox",
+    locale: "en",
+    adminOpenOnStartup: true,
+    excludeDirectories: [],
+    maxScanDepth: 4,
+    todayDirectory: "C:/memo/2026/03",
+    todayMemoPath: "C:/memo/2026/03/2026-03-25.md",
+    templatePath: "C:/memo/.vscode-memobox/templates/simple.md",
+    hasExplicitTemplateOverride: false,
+    templatesDirectory: "C:/memo/.vscode-memobox/templates",
+    templatesDirectoryReady: true,
+    snippetsDirectory: "C:/memo/.vscode-memobox/snippets",
+    snippetsDirectoryReady: true,
+    templates: [],
+    snippets: [],
+    aiEnabled: false,
+    aiCostMode: "off",
+    aiPerRequestLimitUsd: 0,
+    aiMonthlyLimitUsd: 0,
+    aiConfigured: false,
+    aiProfileName: "",
+    aiProvider: "",
+    aiModel: "",
+    aiEndpoint: "",
+    aiApiKeySource: "none",
+    aiIssueSummary: "",
+    aiMonthlyEstimatedCostUsd: 0,
+    aiMonthlyRequestCount: 0,
+    totalFiles: 100,
+    latestUpdatedAtLabel: "2026-03-25",
+    indexFilePath: "index.json",
+    indexFileExists: true,
+    indexFileSizeLabel: "5 KB",
+    indexLoadSource: "primary",
+    indexBackupExists: false,
+    indexTransientBackupExists: false,
+    pinnedFiles: [],
+    recentFiles: [],
+    folderCounts: [],
+    topTags: [],
+    customPages: []
+  };
+
+  const vars = buildCustomPageVariables(model);
+
+  assert.equal(vars.VERSION, "2.0.0");
+  assert.equal(vars.MEMO_ROOT, "C:/memo");
+  assert.equal(vars.TOTAL_FILES, "100");
+  assert.equal(vars.LOCALE, "en");
+  assert.equal(vars.DATE_PATH_FORMAT, "yyyy/MM");
+  assert.equal(vars.META_DIR, ".vscode-memobox");
+});
+
+test("extractTemplateKeys returns variables and loops from template", () => {
+  const usage = extractTemplateKeys(
+    "<h1>{{VERSION}}</h1>{{#each RECENT_FILES}}<li>{{.relativePath}}</li>{{/each}}<p>{{MEMO_ROOT}}</p>"
+  );
+
+  assert.deepEqual([...usage.variables].sort(), ["MEMO_ROOT", "VERSION"]);
+  assert.deepEqual([...usage.loops], ["RECENT_FILES"]);
+});
+
+test("extractTemplateKeys returns empty sets for plain HTML", () => {
+  const usage = extractTemplateKeys("<h1>Hello World</h1>");
+
+  assert.equal(usage.variables.size, 0);
+  assert.equal(usage.loops.size, 0);
+});
+
+test("resolveRequiredGroups returns empty set for settings-only variables", () => {
+  const usage = extractTemplateKeys("{{VERSION}} {{MEMO_ROOT}} {{LOCALE}}");
+  const groups = resolveRequiredGroups(usage);
+
+  assert.equal(groups.size, 0);
+});
+
+test("resolveRequiredGroups includes index for TOTAL_FILES", () => {
+  const usage = extractTemplateKeys("{{TOTAL_FILES}}");
+  const groups = resolveRequiredGroups(usage);
+
+  assert.equal(groups.has("index"), true);
+  assert.equal(groups.has("templates"), false);
+});
+
+test("resolveRequiredGroups includes index and pinned for RECENT_FILES loop", () => {
+  const usage = extractTemplateKeys("{{#each RECENT_FILES}}<li>{{.relativePath}}</li>{{/each}}");
+  const groups = resolveRequiredGroups(usage);
+
+  assert.equal(groups.has("index"), true);
+  assert.equal(groups.has("pinned"), true);
+  assert.equal(groups.has("templates"), false);
+  assert.equal(groups.has("snippets"), false);
+});
+
+test("resolveRequiredGroups includes templates for TEMPLATES loop", () => {
+  const usage = extractTemplateKeys("{{#each TEMPLATES}}<li>{{.name}}</li>{{/each}}");
+  const groups = resolveRequiredGroups(usage);
+
+  assert.equal(groups.has("templates"), true);
+  assert.equal(groups.has("index"), false);
+});
+
+test("resolveRequiredGroups includes pinned implies index", () => {
+  const usage = extractTemplateKeys("{{#each PINNED_FILES}}<li>{{.relativePath}}</li>{{/each}}");
+  const groups = resolveRequiredGroups(usage);
+
+  assert.equal(groups.has("pinned"), true);
+  assert.equal(groups.has("index"), true);
 });
 
 function createEnglishUiText(): MemoBoxUiText {
@@ -105,6 +370,15 @@ function createEnglishUiText(): MemoBoxUiText {
         default:
           return riskCode;
       }
+    },
+    pages: {
+      commandTitle: "MemoBox: Open Custom Page",
+      noPagesFound: "No custom pages found.",
+      pickerPlaceholder: "Select a custom page to open",
+      panelSectionTitle: "Custom Pages",
+      pageCount: (count) => `${count} pages`,
+      blockedCommand: "Blocked command",
+      blockedPath: "Blocked path"
     },
     admin: {
       pageTitle: "MemoBox",

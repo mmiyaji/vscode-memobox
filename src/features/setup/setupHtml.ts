@@ -2,12 +2,14 @@ import { applyTemplateVariables, loadWebviewTemplate } from "../../shared/webvie
 import type { MemoBoxUiText } from "../../shared/uiText";
 import type { MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import type { SetupViewModel } from "./setupViewModel";
+import type { MemoBoxUiLanguage } from "../../shared/uiText";
 
 export function renderSetupHtml(
   model: SetupViewModel,
   nonce: string,
   step: "memoRoot" | "workspace" | "done",
-  ui: MemoBoxUiText
+  ui: MemoBoxUiText,
+  language: MemoBoxUiLanguage = "en"
 ): string {
   const template = loadWebviewTemplate("setup.html");
   const css = loadWebviewTemplate("setup.css");
@@ -25,17 +27,22 @@ export function renderSetupHtml(
       renderStepPill(text.stepWorkspace, step === "workspace"),
       renderStepPill(text.stepReady, step === "done")
     ].join(""),
-    STEP_CONTENT: renderStepContent(model, step, ui),
+    STEP_CONTENT: renderStepContent(model, step, ui, language),
     SCRIPT: buildSetupScript()
   });
 }
 
-function renderStepContent(model: SetupViewModel, step: "memoRoot" | "workspace" | "done", ui: MemoBoxUiText): string {
+function renderStepContent(
+  model: SetupViewModel,
+  step: "memoRoot" | "workspace" | "done",
+  ui: MemoBoxUiText,
+  language: MemoBoxUiLanguage
+): string {
   switch (step) {
     case "workspace":
-      return renderWorkspaceStep(model, ui);
+      return renderWorkspaceStep(model, ui, language);
     case "done":
-      return renderDoneStep(model, ui);
+      return renderDoneStep(model, ui, language);
     case "memoRoot":
     default:
       return renderMemoRootStep(model, ui);
@@ -112,8 +119,9 @@ function renderBroadRootRecommendationLine(
   return `<p class="warning-reasons">${escapeHtml(message)}</p>`;
 }
 
-function renderWorkspaceStep(model: SetupViewModel, ui: MemoBoxUiText): string {
+function renderWorkspaceStep(model: SetupViewModel, ui: MemoBoxUiText, language: MemoBoxUiLanguage): string {
   const text = ui.setup;
+  const guide = getSetupGuideText(language);
   return `
     <div data-testid="setup-step-workspace">
       <h2 data-testid="setup-workspace-heading">${escapeHtml(text.workspaceHeading)}</h2>
@@ -137,12 +145,30 @@ function renderWorkspaceStep(model: SetupViewModel, ui: MemoBoxUiText): string {
         <span class="label">${escapeHtml(text.recommendations)}</span>
         <span class="value">MemoBox<br />Markdown All in One</span>
       </section>
+      <section class="info-card onboarding-card" data-testid="setup-workspace-guide">
+        <span class="label">${escapeHtml(guide.workspaceGuideLabel)}</span>
+        <h3>${escapeHtml(guide.workspaceGuideTitle)}</h3>
+        <p class="muted">${escapeHtml(guide.workspaceGuideCopy)}</p>
+        <div class="info-list">
+          <div>
+            <strong>${escapeHtml(guide.fileAssociationTitle)}</strong>
+            <p class="muted">${escapeHtml(guide.fileAssociationCopy)}</p>
+          </div>
+          <div>
+            <strong>${escapeHtml(guide.themeSampleTitle)}</strong>
+            <p class="muted">${escapeHtml(guide.themeSampleCopy)}</p>
+          </div>
+        </div>
+        <div class="code-sample-label">${escapeHtml(guide.themeSampleLabel)}</div>
+        <pre class="code-sample"><code>${escapeHtml(guide.themeSample)}</code></pre>
+      </section>
     </div>
   `;
 }
 
-function renderDoneStep(model: SetupViewModel, ui: MemoBoxUiText): string {
+function renderDoneStep(model: SetupViewModel, ui: MemoBoxUiText, language: MemoBoxUiLanguage): string {
   const text = ui.setup;
+  const guide = getSetupGuideText(language);
   return `
     <div data-testid="setup-step-done">
       <h2 data-testid="setup-done-heading">${escapeHtml(text.readyHeading)}</h2>
@@ -167,8 +193,45 @@ function renderDoneStep(model: SetupViewModel, ui: MemoBoxUiText): string {
         <span class="label">${escapeHtml(text.readyNext)}</span>
         <span class="value">${escapeHtml(text.readyNextCopy)}</span>
       </section>
+      <section class="info-card onboarding-card">
+        <span class="label">${escapeHtml(guide.workspaceGuideLabel)}</span>
+        <h3>${escapeHtml(guide.readyTipsTitle)}</h3>
+        <p class="muted">${escapeHtml(guide.readyTipsCopy)}</p>
+      </section>
     </div>
   `;
+}
+
+function getSetupGuideText(language: MemoBoxUiLanguage) {
+  if (language === "ja") {
+    return {
+      workspaceGuideLabel: "Workspace Tips",
+      workspaceGuideTitle: ".code-workspace を使うと始めやすくなります",
+      workspaceGuideCopy: "生成した MemoBox.code-workspace を VS Code に関連付けておくと、ファイルをクリックするだけで MemoBox 用ワークスペースを開けます。",
+      fileAssociationTitle: ".code-workspace の開き方",
+      fileAssociationCopy: "Windows なら .code-workspace を VS Code に関連付けておくと、エクスプローラーからダブルクリックでそのまま開けます。",
+      themeSampleTitle: "ワークスペースごとにテーマも変えられます",
+      themeSampleCopy: "MemoBox 用ワークスペースだけ色やテーマを変えたい場合は、workspace settings に theme を入れます。",
+      themeSampleLabel: "サンプル",
+      themeSample: `{\n  "workbench.colorTheme": "Default Dark Modern",\n  "workbench.iconTheme": "vs-seti",\n  "workbench.colorCustomizations": {\n    "statusBar.background": "#23415f",\n    "statusBar.foreground": "#f6fbff"\n  }\n}`,
+      readyTipsTitle: "次の一歩",
+      readyTipsCopy: "Workspace ファイルを使うと、MemoBox 専用のテーマや設定を分けて運用できます。必要なら後から何度でも作り直せます。"
+    };
+  }
+
+  return {
+    workspaceGuideLabel: "Workspace Tips",
+    workspaceGuideTitle: "A .code-workspace file makes MemoBox easier to reopen",
+    workspaceGuideCopy: "If you associate .code-workspace files with VS Code, opening MemoBox.code-workspace will reopen your dedicated MemoBox workspace directly.",
+    fileAssociationTitle: "How to open it",
+    fileAssociationCopy: "On Windows, associate .code-workspace with VS Code and you can open the MemoBox workspace from Explorer with a double click.",
+    themeSampleTitle: "Themes can be workspace-specific",
+    themeSampleCopy: "If you want MemoBox to use a different theme from your main coding workspace, add theme settings to the generated workspace file.",
+    themeSampleLabel: "Sample",
+    themeSample: `{\n  "workbench.colorTheme": "Default Dark Modern",\n  "workbench.iconTheme": "vs-seti",\n  "workbench.colorCustomizations": {\n    "statusBar.background": "#23415f",\n    "statusBar.foreground": "#f6fbff"\n  }\n}`,
+    readyTipsTitle: "Next step",
+    readyTipsCopy: "Using a workspace file lets you keep MemoBox-specific theme and UI settings separate from your main development setup."
+  };
 }
 
 function renderStepPill(label: string, active: boolean): string {

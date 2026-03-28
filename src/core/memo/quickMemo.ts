@@ -1,9 +1,12 @@
 import { format } from "date-fns";
+import type { MemoBoxSettings } from "../config/types";
 import { memoFileDateFormat } from "./constants";
 import { buildMemoTitleInput } from "./fileName";
+import { buildNewMemoContent } from "./template";
 
-export function buildQuickMemoInitialContent(date: Date, dateFormat: string): string {
-  return `# ${format(date, dateFormat || memoFileDateFormat)}\n\n`;
+export async function buildQuickMemoInitialContent(settings: MemoBoxSettings, date: Date): Promise<string> {
+  const dailyTitle = format(date, memoFileDateFormat);
+  return await buildNewMemoContent(settings, dailyTitle, date);
 }
 
 export function buildQuickMemoAppendText(

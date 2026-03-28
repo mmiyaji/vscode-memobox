@@ -2,23 +2,15 @@
 
 [English README](./README.md)
 
-## AI SecretStorage の設定手順
+MemoBox は、日付ベースのメモ運用を VS Code 上で行うための拡張機能です。
+保守しやすい構造、日常的に使いやすいメモ操作、必要な場合だけ有効化できる AI 機能を重視しています。
 
-1. `memobox.aiEnabled` を `true` にします。
-2. 使いたい profile を `memobox.ai` で設定します。
-3. コマンドパレットで `MemoBox: AI Set API Key` を実行します。
-4. 対象の profile を選択します。
-5. API キーを貼り付けて確定します。
+## 現在のリリース
 
-保存したキーは `settings.json` には出ません。削除したい場合は `MemoBox: AI Clear Stored API Key` を実行してください。
+- 現在のリリース: `0.1.0`
+- 位置づけ: 初回公開リリース
 
-MemoBox は、日次メモ運用向けの VS Code 拡張です。保守しやすい構造、実用的なメモ操作、そしてオプトインの AI 機能を重視しています。
-
-## 現在の状態
-
-- リリース系統: `0.1.x`
-- 現在の重点: 安定性、保守性、リリース準備
-MemoBox はすでに日常利用できる状態です。残っている `0.1.x` の作業は、大きな機能追加よりも UX の調整、耐障害性、パッケージ品質の改善が中心です。
+MemoBox `0.1.0` は、日々のメモ作成・検索・参照・管理を一通り行える状態を目標にしています。
 
 ## スクリーンショット
 
@@ -30,7 +22,7 @@ MemoBox はすでに日常利用できる状態です。残っている `0.1.x` 
 
 ![MemoBox setup flow](./docs/screenshots/setup-flow.png)
 
-操作デモ:
+基本ワークフロー:
 
 ![MemoBox memo workflow demo](./docs/screenshots/memo-workflow.gif)
 
@@ -38,32 +30,34 @@ MemoBox はすでに日常利用できる状態です。残っている `0.1.x` 
 
 ![MemoBox quick memo demo](./docs/screenshots/quick-memo.gif)
 
-検索:
+Grep:
 
 ![MemoBox grep workflow demo](./docs/screenshots/grep-workflow.gif)
 
 セットアップ:
 
 ![MemoBox setup workflow demo](./docs/screenshots/setup-workflow.gif)
- 
-AI:
+
+AI タイトル補助:
 
 ![MemoBox AI title workflow demo](./docs/screenshots/ai-title-workflow.gif)
 
 ## 主な機能
 
-- 日付付きメモの新規作成とテンプレート選択
+- 日付付きメモの作成とテンプレート選択
 - 今日のメモへのクイック追記
-- 一覧・編集、タグ閲覧、grep、todo 抽出、関連メモ提示
+- 一覧、タグ閲覧、Grep、Todo 抽出、関連メモ表示
 - 相対メモリンク挿入と Markdown リンク補完
-- Admin ダッシュボード、Setup フロー、ワークスペースファイル生成
-- バックアップ復旧と増分更新に対応した永続メモインデックス
-- 同梱 scaffold からのテンプレート・スニペット初期生成
-- コマンド、設定、Admin UI、Setup UI の多言語対応
-- MemoBox / AI 用 OutputChannel ログ
-- タイトル生成、要約、タグ提案、翻訳、Q&A、レポート、リンク提案などの任意 AI 支援
+- Backlinks 表示と `[[memo]]` の作成または解決
+- Markdown 用の Slash コマンド、表整形、脚注補助
+- 管理画面、セットアップ画面、ワークスペース生成、カスタムページ
+- バックアップ付き永続インデックスと増分更新
+- scaffold からのテンプレート・スニペット初期配置
+- 日本語 / 英語の UI
+- MemoBox / AI のログ出力
+- 任意で有効化できる AI 支援
 
-## コマンド
+## 主なコマンド
 
 日常利用:
 
@@ -72,13 +66,17 @@ AI:
 - `MemoBox: 一覧 / 編集`
 - `MemoBox: タグから開く`
 - `MemoBox: メモリンクを挿入`
-- `MemoBox: 検索`
+- `MemoBox: Show Backlinks`
+- `MemoBox: Open or Create [[memo]]`
+- `MemoBox: Grep`
 - `MemoBox: Todo`
 - `MemoBox: 関連メモ`
-- `MemoBox: 日付を今日に変更`
+- `MemoBox: Re:Date`
 - `MemoBox: Markdown をブラウザで開く`
+- `MemoBox: Format Markdown Table`
+- `MemoBox: Insert Footnote`
 
-セットアップ・メンテナンス:
+管理・セットアップ:
 
 - `MemoBox Admin: 管理画面を開く`
 - `MemoBox Admin: Setup を開く`
@@ -90,130 +88,136 @@ AI:
 - `MemoBox Admin: インデックスキャッシュを削除`
 - `MemoBox Admin: ログを開く`
 - `MemoBox Admin: AI ログを開く`
+- `MemoBox: Open Custom Page`
 
-AI コマンドは `memobox.aiEnabled` を有効化するまで表示されません:
+AI コマンドは `memobox.aiEnabled` が有効な場合のみ表示されます。
 
-- `MemoBox: AI タイトル生成`
-- `MemoBox: AI 要約`
-- `MemoBox: AI タグ提案`
-- `MemoBox: AI 校正`
-- `MemoBox: AI 翻訳`
-- `MemoBox: AI 質問`
-- `MemoBox: AI テンプレート提案`
-- `MemoBox: AI レポート`
-- `MemoBox: AI リンク提案`
-- `MemoBox: AI API キーを保存`
-- `MemoBox: AI API キーを削除`
+## 日常ワークフロー
 
-既定キーバインド:
+`MemoBox: 新規メモ` は `memobox.memodir` 配下に、`memobox.datePathFormat` に従った日付付きメモを作成します。テンプレート選択、選択文字列やクリップボードからのタイトル補助にも対応しています。
 
-- `Ctrl+Alt+N` で `新規メモ`
-- `Ctrl+Alt+T` で `今日のクイックメモ`
-- `Ctrl+Alt+G` で `検索`
-- `Ctrl+Alt+Shift+M` で `管理画面を開く`
+`MemoBox: 今日のクイックメモ` は今日のメモへ時刻付きブロックを追記します。まだ当日のメモがない場合は、既定テンプレートを使って最初のファイルを作成します。
 
-## 日常の使い方
+`MemoBox: メモリンクを挿入` は別メモへの相対 Markdown リンクを挿入します。`[[...` や `[Label](` 入力中の補完にも対応しています。
 
-`MemoBox: 新規メモ` は、`memobox.memodir` 配下に `memobox.datePathFormat` に従った日付付きメモを作成します。`.vscode-memobox/templates/*.md` のテンプレート選択、選択文字列やクリップボードからのファイル名生成、日付サフィックス付与に対応しています。
+`MemoBox: Show Backlinks` は現在のメモを参照しているメモを一覧表示します。`MemoBox: Open or Create [[memo]]` はカーソル位置の wiki 形式リンクを解決し、見つからなければ新規メモを作成します。
 
-`MemoBox: 今日のクイックメモ` は今日のメモへ時刻付きブロックを追記します。追記見出しの形式は `titlePrefix` と `dateFormat` で制御します。
+MemoBox には Markdown 補助もあります。
 
-`MemoBox: メモリンクを挿入` は、別メモへの相対 Markdown リンクを挿入します。`[[...` や `[Label](` の入力中にも補完が働き、長めのクエリでは軽い typo 許容も入っています。
+- `/` 入力から使える Slash コマンド
+- `MemoBox: Format Markdown Table`
+- `MemoBox: Insert Footnote`
 
 ## コマンドランチャー
 
-`MemoBox: Commands` は、Daily / Context / Maintenance / AI に分かれた QuickPick ランチャーを開きます。グローバルなコマンドパレットより対象を絞って使いたい場合に便利です。
+`MemoBox: Commands` は、Daily / Context / Maintenance / AI ごとに整理された QuickPick ランチャーです。グローバルなコマンドパレットより、MemoBox の操作だけを絞って使いたい時に向いています。
 
 ## テンプレートとスニペット
 
-MemoBox は [`resources/scaffold`](/C:/Users/mail/Documents/git/vscode-memobox/resources/scaffold) から初期テンプレートとスニペットをメタディレクトリへ展開します。現在の標準 scaffold は次の 3 つです。
+MemoBox は [`resources/scaffold`](/C:/Users/mail/Documents/git/vscode-memobox/resources/scaffold) から初期テンプレートとスニペットを配置します。
+
+既定 scaffold:
 
 - `simple.md`
 - `meeting.md`
 - `memo.json`
 
-既定テンプレートは YAML frontmatter 付きで、少なくとも次を含みます。
+テンプレートは YAML frontmatter を前提としており、主に次の項目を使います。
 
 - `title`
 - `tags`
 - `date`
 
-`simple.md` には初期タグとして `inbox` が入っています。テンプレートとスニペットの格納先は、標準のメタディレクトリ配下でも、設定で指定した絶対パスでも使えます。
+`simple.md` には初期タグとして `inbox` が入っています。テンプレートとスニペットの配置先は、既定のメタディレクトリ配下または設定した絶対パスのどちらにもできます。
 
-## インデックスの仕組み
+## インデックス
 
-MemoBox はメモファイルのメタデータインデックスを永続化しています。保存するのはパス、タイムスタンプ、サイズ、frontmatter の `title` と `tags` で、本文全体はキャッシュしません。
+MemoBox はメモファイル用の永続インデックスを持ちます。保存内容はパス、時刻、サイズ、frontmatter の `title` と `tags` で、本文そのものはキャッシュしません。
 
 現在の挙動:
 
-- 初回読込では `primary -> backup -> transient backup` の順で persisted index を読み込みます
-- 通常編集では save / create / delete / rename イベントに応じて増分更新します
-- フル再帰走査は初回、明示的 refresh/rebuild、不明な変更源、定期検証時だけに限定します
-- 読み込めないファイルは全体失敗にせずスキップします
-- 安全書き込みは temp ファイルと backup ファイルを併用して破損耐性を上げています
+- 初回ロード時は `primary -> backup -> transient backup` の順で読み込み
+- 通常の編集では save / create / delete / rename イベントに応じた増分更新
+- フル再帰走査は初回、明示更新、未知変更、定期検証時に限定
+- 読めないファイルは全体失敗にせずスキップ
+- 安全書き込みは temp + backup を使う
 
-この index は次の機能で使われます。
+このインデックスは次の機能で使われます。
 
 - `一覧 / 編集`
 - `タグから開く`
 - `関連メモ`
-- `検索`
+- `Grep`
 - `Todo`
 - メモリンク挿入と補完
-- Admin の集計表示
+- Admin の統計表示
 
-## Admin と Setup
+## Admin / Setup / Custom Pages
 
-MemoBox には 2 つの Webview があります。
+MemoBox には 2 つの組み込み Webview と、ユーザー作成のカスタムページがあります。
 
 - `Setup`
-  初回セットアップや修復フローに使います。まず `memobox.memodir` をグローバル設定へ保存し、その後で任意の `.code-workspace` 作成へ進みます。
+  - 初回設定と修復フロー用
+  - `memobox.memodir` をまずグローバル設定に保存
+  - 必要に応じて `.code-workspace` を生成
 - `Admin`
-  Recent、Pinned、タグ、テンプレート、スニペット、AI 状態、ログ、index 状態を確認する運用ダッシュボードです。
+  - Recent / Pinned / Tags / Templates / Snippets / AI 状態 / Logs / Index 状態を確認するための運用画面
+- `Custom Pages`
+  - `.vscode-memobox/pages/` に配置した HTML を個別 Webview で表示
+  - `{{VERSION}}` や `{{MEMO_ROOT}}`、`{{#each RECENT_FILES}}...{{/each}}` などのテンプレート変数に対応
+  - `MemoBox: Open Custom Page` から開けます
 
 Admin では `memobox.adminOpenOnStartup` の切り替えもできます。
 
 ## AI
 
-AI は明示的なオプトインです。
+AI は明示的な opt-in です。
 
 - `memobox.aiEnabled`
-  既定値: `false`
+  - 既定値: `false`
 - `memobox.ai`
-  provider profile、timeout、network 設定などをまとめた JSON
+  - provider / profile / timeout / network などをまとめた JSON 設定
 
-AI を無効にしている間は:
+AI を無効にしている間:
 
-- コマンドパレットに AI コマンドは出ません
-- Markdown エディタの右クリックメニューにも AI 項目は出ません
+- AI コマンドはコマンドパレットに表示されません
+- Markdown エディタの右クリックメニューにも表示されません
 
-API キーの解決順は次の通りです。
+API キーの解決順:
 
 1. VS Code SecretStorage
 2. `apiKeyEnv`
-3. settings JSON の `apiKey`（旧設定互換）
+3. settings JSON の `apiKey`（互換用）
 
-OpenAI 系 profile では、settings JSON 直書きより SecretStorage または環境変数の利用を推奨します。
+OpenAI 系 profile では、平文設定より SecretStorage や環境変数の利用を推奨しています。
+
+SecretStorage に API キーを保存する手順:
+
+1. `memobox.aiEnabled` を有効にする
+2. `memobox.ai` で利用する profile を設定する
+3. コマンドパレットで `MemoBox: AI Set API Key` を実行する
+4. 対象 profile を選ぶ
+5. API キーを入力して保存する
+
+削除したい場合は `MemoBox: AI Clear Stored API Key` を実行します。
 
 ## ログ
 
-MemoBox は 2 つの VS Code OutputChannel にログを出します。
+MemoBox は次の 2 つの OutputChannel にログを書きます。
 
 - `MemoBox`
 - `MemoBox AI`
 
-ログレベルは `memobox.logLevel` で制御できます。既定値は `warn` です。
+ログレベルは `memobox.logLevel` で変更できます。既定値は `warn` です。
 
 - `off`
 - `error`
 - `warn`
 - `info`
 
-Admin には両方のログを開くボタンがあります。
+Admin から両方のログを開けます。
 
-## 設定
-
-現在の主な設定項目:
+## 主な設定
 
 - `memobox.memodir`
 - `memobox.datePathFormat`
@@ -245,7 +249,7 @@ Admin には両方のログを開くボタンがあります。
 
 ## 開発
 
-必要環境:
+要件:
 
 - Node.js `20.19.0`
 - npm `10.x`
@@ -263,20 +267,20 @@ npm run capture:readme-screenshots
 npm run capture:readme-gif
 ```
 
-VS Code 上で拡張を起動する手順:
+VS Code 上で試す手順:
 
 1. このリポジトリを VS Code で開く
-2. `npm install` を実行
-3. `F5` で Extension Development Host を起動
-4. コマンドパレットから `MemoBox Admin: 管理画面を開く` を実行
+2. `npm install` を実行する
+3. `F5` で Extension Development Host を起動する
+4. `MemoBox Admin: 管理画面を開く` を実行する
 
-## パッケージとテスト
+## パッケージングとテスト
 
-- Unit test では index、grep/todo、tags、related memos、templates、snippets、logging、link completion などの純粋ロジックを検証しています
-- Playwright E2E では Setup、Admin pin/unpin、新規メモのテンプレート選択、Grep/Todo、設定グループ、AI コマンド表示制御を確認しています
-- VSIX には [`.vscodeignore`](/C:/Users/mail/Documents/git/vscode-memobox/.vscodeignore) で docs、tests、Playwright assets、scripts、source maps などを含めないようにしています
+- Unit test では index、grep/todo、tags、related memos、templates、snippets、logging、link completion などを検証しています
+- Playwright E2E では Setup、Admin pin/unpin、新規メモ作成、Grep/Todo、設定表示、AI 表示などを確認しています
+- VSIX では [`.vscodeignore`](/C:/Users/mail/Documents/git/vscode-memobox/.vscodeignore) により docs、tests、Playwright 資産、scripts、source maps などを除外しています
 
-VSIX を作成するには:
+VSIX を生成するには:
 
 ```bash
 npm run package:vsix
@@ -288,14 +292,14 @@ npm run package:vsix
 src/
   core/         ドメインロジックと設定
   features/     VS Code コマンドと UI
-  infra/        AI など provider 依存の統合
-  shared/       共通ヘルパーと拡張メタ情報
-test/           純粋モジュール向け unit test
-docs/           プロダクトメモと設計メモ
+  infra/        AI などの provider 固有実装
+  shared/       共通ヘルパーと拡張メタデータ
+test/           純粋ロジック用 unit test
+docs/           補助ドキュメントと README 用素材
 resources/      scaffold と webview テンプレート
 ```
 
-## License
+## ライセンス
 
 MIT
 

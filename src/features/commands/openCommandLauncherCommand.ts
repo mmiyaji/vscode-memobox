@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { readSettings } from "../../core/config/settings";
-import { getMemoCommandLauncherDescriptors } from "./commandLauncherItems";
 import { resolveUiLanguage } from "../../shared/uiText";
+import { getMemoCommandLauncherDescriptors } from "./commandLauncherItems";
 
 interface MemoCommandLauncherItem extends vscode.QuickPickItem {
   readonly command?: string;

@@ -1,11 +1,11 @@
 ---
-title: '{{title}}'
+title: {{titleYaml}}
 tags:
   - meeting
 date: {{date}}
 ---
 
-# {{.Date}} {{.Title}}
+# {{date}} {{title}}
 
 ## Attendees
 

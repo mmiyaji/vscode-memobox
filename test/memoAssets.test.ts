@@ -40,6 +40,7 @@ function createSettings(memodir: string): MemoBoxSettings {
     memoNewFilenameDateSuffix: "",
     locale: "auto",
     logLevel: "info",
+    slashCommandsEnabled: true,
     aiEnabled: false,
     ai: {
       defaultProfile: "local",
@@ -75,7 +76,7 @@ test("ensureMemoMetaDirectories creates template and snippet directories", async
 
     assert.deepEqual(
       templates.map((item) => item.name),
-      ["meeting.md", "simple.md"]
+      ["daily.md", "meeting.md", "simple.md"]
     );
     assert.deepEqual(
       snippets.map((item) => item.name),
@@ -85,7 +86,7 @@ test("ensureMemoMetaDirectories creates template and snippet directories", async
     const simpleTemplate = await readFile(join(memodir, ".vscode-memobox", "templates", "simple.md"), "utf8");
     const scaffoldSnippets = await readFile(join(memodir, ".vscode-memobox", "snippets", "memo.json"), "utf8");
 
-    assert.match(simpleTemplate, /^---\ntitle: '\{\{title\}\}'\ntags:\n {2}- inbox\ndate: \{\{date\}\}\n---/u);
+    assert.match(simpleTemplate, /^# \{\{(?:\.Date|date)\}\}/u);
     assert.match(scaffoldSnippets, /"title: '\$\{1:Title\}'"/u);
   } finally {
     await rm(memodir, { force: true, recursive: true });

@@ -59,6 +59,7 @@ export function readSettings(): MemoBoxSettings {
     ).trim(),
     locale: readCompatibleSetting(config, "locale", "auto", ["memoDisplayLanguage"]),
     logLevel: readCompatibleSetting(config, "logLevel", defaultLogLevel),
+    slashCommandsEnabled: readCompatibleSetting(config, "slashCommandsEnabled", true),
     aiEnabled: readCompatibleSetting(config, "aiEnabled", false),
     aiCostMode: normalizeAiCostMode(readCompatibleSetting(config, "aiCostMode", defaultAiCostMode)),
     aiPerRequestLimitUsd: normalizeNonNegativeNumber(

@@ -24,7 +24,7 @@
     "description": "Insert a date section heading"
   },
   "Task list": {
-    "prefix": "task",
+    "prefix": ["task"],
     "body": [
       "## Tasks",
       "",

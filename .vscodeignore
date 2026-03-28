@@ -12,7 +12,10 @@ src/**
 test/**
 test-results/**
 tsconfig*.json
-README_ja.md
 .editorconfig
 dist/**/*.map
 memobox-*.vsix
+media/icon-concept-dashboard-note.svg
+media/icon-variant-*.svg
+media/memobox.svg
+media/memobox-neon*

@@ -4,7 +4,7 @@
   "description": "A maintainable daily memo workflow extension for VS Code.",
   "version": "0.1.0",
   "publisher": "mmiyaji",
-  "icon": "media/icon.png",
+  "icon": "media/memobox.png",
   "license": "MIT",
   "private": false,
   "repository": {
@@ -36,6 +36,11 @@
     "onCommand:memobox.listMemos",
     "onCommand:memobox.listTags",
     "onCommand:memobox.insertMemoLink",
+    "onCommand:memobox.showBacklinks",
+    "onCommand:memobox.openOrCreateWikiMemo",
+    "onCommand:memobox.alignSelectedCsv",
+    "onCommand:memobox.formatMarkdownTable",
+    "onCommand:memobox.insertFootnote",
     "onCommand:memobox.createWorkspace",
     "onCommand:memobox.grepMemos",
     "onCommand:memobox.todoMemos",
@@ -98,6 +103,26 @@
         "title": "%commands.insertMemoLink.title%"
       },
       {
+        "command": "memobox.showBacklinks",
+        "title": "%commands.showBacklinks.title%"
+      },
+      {
+        "command": "memobox.openOrCreateWikiMemo",
+        "title": "%commands.openOrCreateWikiMemo.title%"
+      },
+      {
+        "command": "memobox.alignSelectedCsv",
+        "title": "%commands.alignSelectedCsv.title%"
+      },
+      {
+        "command": "memobox.formatMarkdownTable",
+        "title": "%commands.formatMarkdownTable.title%"
+      },
+      {
+        "command": "memobox.insertFootnote",
+        "title": "%commands.insertFootnote.title%"
+      },
+      {
         "command": "memobox.createWorkspace",
         "title": "%commands.createWorkspace.title%"
       },
@@ -156,6 +181,10 @@
       {
         "command": "memobox.openAdmin",
         "title": "%commands.openAdmin.title%"
+      },
+      {
+        "command": "memobox.openCustomPage",
+        "title": "%commands.openCustomPage.title%"
       },
       {
         "command": "memobox.openCommandLauncher",
@@ -262,6 +291,28 @@
         {
           "command": "memobox.insertMemoLink",
           "group": "1_basic@5"
+        },
+        {
+          "command": "memobox.showBacklinks",
+          "group": "1_basic@5.1"
+        },
+        {
+          "command": "memobox.openOrCreateWikiMemo",
+          "group": "1_basic@5.2"
+        },
+        {
+          "command": "memobox.alignSelectedCsv",
+          "group": "1_basic@5.5",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "memobox.formatMarkdownTable",
+          "group": "1_basic@5.6",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "memobox.insertFootnote",
+          "group": "1_basic@5.7"
         },
         {
           "command": "memobox.grepMemos",
@@ -602,12 +653,35 @@
             "default": "warn",
             "order": 63,
             "markdownDescription": "%settings.logLevel.description%"
+          },
+          "memobox.slashCommandsEnabled": {
+            "type": "boolean",
+            "default": true,
+            "order": 64,
+            "markdownDescription": "%settings.slashCommandsEnabled.description%"
+          }
+        }
+      },
+      {
+        "title": "%config.csvAlignment.title%",
+        "order": 7,
+        "properties": {
+          "memobox.csvAlignment.eastAsianWidth": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "1",
+              "2"
+            ],
+            "default": "auto",
+            "order": 70,
+            "markdownDescription": "%settings.csvAlignment.eastAsianWidth.description%"
           }
         }
       },
       {
         "title": "%config.ai.title%",
-        "order": 7,
+        "order": 8,
         "properties": {
           "memobox.aiEnabled": {
             "type": "boolean",
@@ -683,8 +757,9 @@
     "test:e2e:headed": "npm run build && playwright test --headed",
     "capture:readme-screenshots": "node ./scripts/capture-readme-screenshots.mjs",
     "capture:readme-gif": "node ./scripts/capture-readme-gif.mjs",
-    "validate": "npm run lint && npm run typecheck && npm run test && npm run build",
-    "package:vsix": "npm run build && npx @vscode/vsce package --out memobox-0.1.0.vsix"
+    "check:localization": "node ./scripts/check-localization.mjs",
+    "validate": "npm run lint && npm run typecheck && npm run test && npm run build && npm run check:localization",
+    "package:vsix": "npm run build && node ./scripts/package-vsix.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",

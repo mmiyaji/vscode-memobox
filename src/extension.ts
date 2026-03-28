@@ -10,15 +10,18 @@ import {
 import { initializeMemoBoxAiSecrets } from "./infra/ai/secrets";
 import { applyMemoBoxAiContextKeys } from "./infra/ai/contextKeys";
 import { initializeMemoBoxLogging, logMemoBoxInfo } from "./shared/logging";
+import { initializeMemoBoxWebviewTemplates } from "./shared/webviewTemplate";
 import { openAdmin } from "./features/admin/openAdminCommand";
 import { openSetup } from "./features/setup/openSetupCommand";
 import { MemoLinkCompletionProvider } from "./features/links/memoLinkCompletionProvider";
 import { MemoLinkSuggestTrigger } from "./features/links/memoLinkSuggestTrigger";
+import { MemoSlashCommandProvider } from "./features/markdown/memoSlashCommandProvider";
 import { MemoSnippetProvider } from "./features/snippets/memoSnippetProvider";
 import { isReadyMemoRoot } from "./features/welcome/setupFlow";
 import { registerCommands } from "./registerCommands";
 
 export function activate(context: vscode.ExtensionContext): void {
+  initializeMemoBoxWebviewTemplates(context.extensionPath);
   initializeMemoBoxAiSecrets(context.secrets);
   const memoLogChannel = vscode.window.createOutputChannel("MemoBox");
   const memoAiLogChannel = vscode.window.createOutputChannel("MemoBox AI");
@@ -32,6 +35,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const snippetProvider = new MemoSnippetProvider(() => readSettings());
   const memoLinkCompletionProvider = new MemoLinkCompletionProvider(() => readSettings());
   const memoLinkSuggestTrigger = new MemoLinkSuggestTrigger();
+  const memoSlashCommandProvider = new MemoSlashCommandProvider(snippetProvider);
   void applyMemoBoxAiContextKeys();
 
   context.subscriptions.push(
@@ -40,8 +44,10 @@ export function activate(context: vscode.ExtensionContext): void {
     snippetProvider,
     memoLinkCompletionProvider,
     memoLinkSuggestTrigger,
+    memoSlashCommandProvider,
     vscode.languages.registerCompletionItemProvider({ language: "markdown" }, snippetProvider),
     vscode.languages.registerCompletionItemProvider({ language: "markdown" }, memoLinkCompletionProvider, "[", "]", "(", "/"),
+    vscode.languages.registerCompletionItemProvider({ language: "markdown" }, memoSlashCommandProvider, "/"),
     vscode.workspace.onDidSaveTextDocument((document) => {
       if (document.uri.scheme === "file") {
         noteMemoIndexFileUpsert(document.uri.fsPath);

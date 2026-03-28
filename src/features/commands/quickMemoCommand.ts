@@ -18,7 +18,7 @@ export async function quickMemo(): Promise<void> {
 
   const filePath = getQuickMemoFilePath(settings, now);
   if (!await fileExists(filePath)) {
-    await writeFile(filePath, buildQuickMemoInitialContent(now, settings.dateFormat), "utf8");
+    await writeFile(filePath, await buildQuickMemoInitialContent(settings, now), "utf8");
   }
 
   const document = await vscode.workspace.openTextDocument(filePath);

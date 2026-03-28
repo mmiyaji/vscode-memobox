@@ -1,0 +1,72 @@
+<svg width="1280" height="1080" viewBox="0 0 1280 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="1080" fill="#0F1720"/>
+  <text x="56" y="82" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700">MemoBox Icon Explorations</text>
+  <text x="56" y="118" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="20">Current concept plus five alternatives tuned for note-taking, dashboard clarity, and Marketplace readability.</text>
+
+  <g transform="translate(56 168)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <image href="../../media/icon-concept-dashboard-note.svg" x="36" y="24" width="192" height="192"/>
+    <text x="24" y="232" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Current</text>
+    <text x="24" y="256" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Current shipped direction for reference.</text>
+  </g>
+
+  <g transform="translate(360 168)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <image href="../../media/icon-variant-a-classic.svg" x="36" y="24" width="192" height="192"/>
+    <text x="24" y="232" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">A. Classic</text>
+    <text x="24" y="256" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Closest to the current identity, slightly cleaner.</text>
+  </g>
+
+  <g transform="translate(664 168)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <image href="../../media/icon-variant-b-flat-note.svg" x="36" y="24" width="192" height="192"/>
+    <text x="24" y="232" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">B. Flat Note</text>
+    <text x="24" y="256" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Most obviously "memo" at a glance.</text>
+  </g>
+
+  <g transform="translate(968 168)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <image href="../../media/icon-variant-c-grid-focus.svg" x="36" y="24" width="192" height="192"/>
+    <text x="24" y="232" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">C. Grid Focus</text>
+    <text x="24" y="256" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Leans into the dashboard aspect most strongly.</text>
+  </g>
+
+  <g transform="translate(56 480)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <image href="../../media/icon-variant-d-monogram.svg" x="36" y="24" width="192" height="192"/>
+    <text x="24" y="232" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">D. Monogram</text>
+    <text x="24" y="256" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Safest silhouette for tiny Marketplace sizes.</text>
+  </g>
+
+  <g transform="translate(360 480)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <image href="../../media/icon-variant-e-tabbed-board.svg" x="36" y="24" width="192" height="192"/>
+    <text x="24" y="232" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">E. Tabbed Board</text>
+    <text x="24" y="256" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Feels more like an organized workspace hub.</text>
+  </g>
+
+  <g transform="translate(664 480)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <image href="../../media/icon-variant-f-bookmark-note.svg" x="36" y="24" width="192" height="192"/>
+    <text x="24" y="232" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">F. Bookmark Note</text>
+    <text x="24" y="256" fill="#9FB2C5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Stronger personal notebook cue with a bookmark.</text>
+  </g>
+
+  <g transform="translate(968 480)">
+    <rect width="264" height="264" rx="28" fill="#16212C"/>
+    <text x="28" y="82" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Quick guidance</text>
+    <text x="28" y="122" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="16">A: safest refinement</text>
+    <text x="28" y="154" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="16">B/F: note-taking first</text>
+    <text x="28" y="186" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="16">C/E: admin workspace first</text>
+    <text x="28" y="218" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="16">D: tiny-size strongest</text>
+  </g>
+
+  <g transform="translate(56 792)">
+    <rect width="1176" height="220" rx="28" fill="#16212C"/>
+    <text x="32" y="46" fill="#F3F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Selection notes</text>
+    <text x="32" y="86" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="18">A keeps the current direction with the least product risk.</text>
+    <text x="32" y="118" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="18">B and F communicate "personal memo space" most clearly.</text>
+    <text x="32" y="150" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="18">C and E are better if the Admin dashboard is the hero surface.</text>
+    <text x="32" y="182" fill="#D5E0EA" font-family="Segoe UI, Arial, sans-serif" font-size="18">D remains the safest option if small-size recognizability is the main goal.</text>
+  </g>
+</svg>

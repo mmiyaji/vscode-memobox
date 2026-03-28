@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
 import { existsSync } from "node:fs";
 import type { MemoBoxSettings } from "../../core/config/types";
+import type { MemoSnippetDefinition } from "../../core/meta/memoAssets";
 import { getSnippetsDirectory, listSnippetAssets } from "../../core/meta/memoAssets";
 
 export class MemoSnippetProvider implements vscode.CompletionItemProvider, vscode.Disposable {
   private items: vscode.CompletionItem[] = [];
+  private definitions: MemoSnippetDefinition[] = [];
   private watchedDirectory = "";
   private watcher: vscode.FileSystemWatcher | undefined;
   private loading: Promise<void> | undefined;
@@ -19,13 +21,19 @@ export class MemoSnippetProvider implements vscode.CompletionItemProvider, vscod
     return [...this.items];
   }
 
+  async getDefinitions(): Promise<readonly MemoSnippetDefinition[]> {
+    await this.reloadIfNeeded();
+    return [...this.definitions];
+  }
+
   async reload(): Promise<void> {
     const settings = this.getSettingsFn();
     const directory = getSnippetsDirectory(settings);
 
     this.ensureWatcher(directory);
     const assets = await listSnippetAssets(settings);
-    this.items = assets.flatMap((asset) => asset.snippets.flatMap((snippet) => toCompletionItems(snippet)));
+    this.definitions = assets.flatMap((asset) => asset.snippets);
+    this.items = this.definitions.flatMap((snippet) => toCompletionItems(snippet));
   }
 
   dispose(): void {

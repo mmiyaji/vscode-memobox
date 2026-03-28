@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
 import { stat } from "node:fs/promises";
+import { join, normalize } from "node:path";
 import { ensureMemoMetaDirectories } from "../../core/meta/memoAssets";
 import { pinMemoByAbsolutePath, unpinMemoByAbsolutePath } from "../../core/meta/pinnedMemos";
+import { defaultMetaDir } from "../../core/config/constants";
 import { readSettings } from "../../core/config/settings";
 import { getExtensionDisplayVersion } from "../../shared/extensionInfo";
 import { getMemoBoxConfigurationTarget } from "../../shared/configTarget";
@@ -15,6 +17,7 @@ import { rebuildIndexCommand } from "../commands/rebuildIndexCommand";
 import { renderAdminHtml } from "./adminHtml";
 import { buildAdminDashboardModel } from "./adminViewModel";
 import { completeMemoBoxSetup } from "../welcome/setupFlow";
+import { openCustomPageByPath } from "../pages/openCustomPageCommand";
 
 const adminViewType = "memobox.admin";
 type AdminMessage =
@@ -26,7 +29,8 @@ type AdminMessage =
   | { readonly type: "clearDefaultTemplate" }
   | { readonly type: "useRecommendedMemoRoot"; readonly path: string }
   | { readonly type: "pinFile"; readonly path: string }
-  | { readonly type: "unpinFile"; readonly path: string };
+  | { readonly type: "unpinFile"; readonly path: string }
+  | { readonly type: "openCustomPage"; readonly path: string };
 
 export function openAdmin(context: vscode.ExtensionContext): void {
   void MemoAdminPanel.show(context);
@@ -80,8 +84,10 @@ class MemoAdminPanel {
     const ui = getMemoBoxUiText(resolveUiLanguage(settings.locale));
     const packageJson = this.context.extension.packageJSON as { version?: string };
     const version = getExtensionDisplayVersion(packageJson.version);
-    const model = await buildAdminDashboardModel(settings, version);
-
+    const meta = settings.metaDir.trim() || defaultMetaDir;
+    const workspacePageDirectories =
+      vscode.workspace.workspaceFolders?.map((folder) => normalize(join(folder.uri.fsPath, meta, "pages"))) ?? [];
+    const model = await buildAdminDashboardModel(settings, version, new Date(), workspacePageDirectories);
     this.panel.title = ui.admin.panelTitle(version);
     this.panel.webview.html = renderAdminHtml(model, getNonce(), ui);
   }
@@ -125,6 +131,9 @@ class MemoAdminPanel {
       case "unpinFile":
         await this.unpinFile(message.path);
         await this.render();
+        return;
+      case "openCustomPage":
+        await openCustomPageByPath(this.context, message.path);
         return;
       default:
         return;
@@ -304,7 +313,7 @@ function isAdminMessage(value: unknown): value is AdminMessage {
     return typeof candidate.path === "string";
   }
 
-  if (candidate.type === "pinFile" || candidate.type === "unpinFile") {
+  if (candidate.type === "pinFile" || candidate.type === "unpinFile" || candidate.type === "openCustomPage") {
     return typeof candidate.path === "string";
   }
 

@@ -30,7 +30,11 @@ const settings: MemoBoxSettings = {
   memoNewFilenameDateSuffix: "",
   locale: "auto",
   logLevel: "info",
+  slashCommandsEnabled: true,
   aiEnabled: false,
+  aiCostMode: "off",
+  aiPerRequestLimitUsd: 0,
+  aiMonthlyLimitUsd: 0,
   ai: {
     defaultProfile: "local",
     profiles: {
@@ -77,6 +81,6 @@ test("getQuickMemoFilePath points to the daily memo file", () => {
 test("getDefaultTemplatePath resolves under the metadata directory", () => {
   assert.equal(
     getDefaultTemplatePath(settings),
-    normalize("/memo/.vscode-memobox/templates/simple.md")
+    normalize("/memo/.vscode-memobox/templates/daily.md")
   );
 });

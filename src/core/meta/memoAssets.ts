@@ -26,6 +26,13 @@ export interface MemoSnippetDefinition {
   readonly body: string;
 }
 
+export interface PageAsset {
+  readonly absolutePath: string;
+  readonly name: string;
+  readonly size: number;
+  readonly updatedAt: Date;
+}
+
 export interface NewMemoTemplateSelectionOption {
   readonly kind: "default" | "template";
   readonly absolutePath?: string;
@@ -59,6 +66,10 @@ export function getSnippetsDirectory(settings: Pick<MemoBoxSettings, "memodir" |
   }
 
   return normalize(join(settings.memodir, settings.metaDir, "snippets"));
+}
+
+export function getPagesDirectory(settings: Pick<MemoBoxSettings, "memodir" | "metaDir">): string {
+  return normalize(join(settings.memodir, settings.metaDir, "pages"));
 }
 
 export async function ensureMemoMetaDirectories(settings: MemoBoxSettings): Promise<void> {
@@ -112,6 +123,19 @@ export async function readSnippetDefinitions(filePath: string): Promise<readonly
   return Object.entries(parsed)
     .flatMap(([name, entry]) => createSnippetDefinition(name, entry))
     .sort((left, right) => left.prefixes[0]!.localeCompare(right.prefixes[0]!));
+}
+
+export async function listPageHtmlFiles(directoryPath: string): Promise<readonly PageAsset[]> {
+  return await listDirectoryAssets(directoryPath, [".html"], async (entryPath, entryName, fileInfo) => ({
+    absolutePath: entryPath,
+    name: entryName,
+    size: Number(fileInfo.size),
+    updatedAt: fileInfo.mtime
+  }));
+}
+
+export async function listPages(settings: Pick<MemoBoxSettings, "memodir" | "metaDir">): Promise<readonly PageAsset[]> {
+  return listPageHtmlFiles(getPagesDirectory(settings));
 }
 
 export function buildNewMemoTemplateSelectionPlan(

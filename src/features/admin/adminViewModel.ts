@@ -1,5 +1,5 @@
-import { stat } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { basename, dirname, normalize } from "node:path";
 import { format } from "date-fns";
 import { defaultAiCostMode, defaultAiMonthlyLimitUsd, defaultAiPerRequestLimitUsd } from "../../core/config/constants";
 import type { MemoBoxSettings } from "../../core/config/types";
@@ -12,8 +12,10 @@ import {
 } from "../../core/index/memoIndex";
 import { resolveMemoBoxAiConfigurationWithSecrets, type MemoBoxAiApiKeySource } from "../../infra/ai/configuration";
 import {
+  getPagesDirectory,
   getSnippetsDirectory,
   getTemplatesDirectory,
+  listPageHtmlFiles,
   listSnippetAssets,
   listTemplateAssets
 } from "../../core/meta/memoAssets";
@@ -24,6 +26,25 @@ import { areSameMemoPaths, getMemoDateDirectory, getPreferredTemplatePath, getQu
 import { buildMemoTagSummaries, type MemoTagSummary } from "../../core/memo/tags";
 import { getDefaultWorkspaceName, getMemoWorkspaceFilePath } from "../../core/meta/memoWorkspace";
 import { getRecommendedMemoRoot } from "../welcome/recommendedMemoRoot";
+import { logMemoBoxInfo } from "../../shared/logging";
+import { normalizeFilePathForComparison } from "../../shared/filePathComparison";
+
+export interface CustomPage {
+  readonly id: string;
+  readonly title: string;
+  readonly htmlBody: string;
+  readonly absolutePath: string;
+}
+
+interface CustomPagesCacheEntry {
+  readonly key: string;
+  readonly pages: readonly CustomPage[];
+  readonly expiresAt: number;
+}
+
+const customPagesCacheTtlMs = 2000;
+const adminTopTagLimit = 8;
+let customPagesCache: CustomPagesCacheEntry | undefined;
 
 export interface AdminDashboardModel {
   readonly version: string;
@@ -76,6 +97,9 @@ export interface AdminDashboardModel {
   readonly recentFiles: readonly AdminRecentFile[];
   readonly folderCounts: readonly AdminCountRow[];
   readonly topTags: readonly MemoTagSummary[];
+  readonly totalTagCount: number;
+  readonly hiddenTagCount: number;
+  readonly customPages: readonly CustomPage[];
 }
 
 export interface AdminRecentFile extends AdminMemoFile {}
@@ -114,7 +138,8 @@ export interface AdminSnippetAsset {
 export async function buildAdminDashboardModel(
   settings: MemoBoxSettings,
   version: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  workspacePageDirectories: readonly string[] = []
 ): Promise<AdminDashboardModel> {
   const memoRootReady = await isExistingDirectory(settings.memodir);
   const entries = memoRootReady ? await getMemoIndexEntries(settings) : [];
@@ -155,6 +180,8 @@ export async function buildAdminDashboardModel(
       };
   const memoRootAssessment = assessMemoRootScope(settings.memodir);
   const recommendedMemoRoot = getRecommendedMemoRoot();
+  const customPages = await buildCustomPages(settings, workspacePageDirectories);
+  const allTags = buildMemoTagSummaries(entries);
 
   return {
     version,
@@ -206,7 +233,10 @@ export async function buildAdminDashboardModel(
     pinnedFiles: buildPinnedAdminFiles(entries, pinnedRelativePaths),
     recentFiles: buildAdminRecentFiles(entries, pinnedRelativePaths, settings.recentCount),
     folderCounts: buildAdminFolderCounts(entries),
-    topTags: buildMemoTagSummaries(entries, 10)
+    topTags: allTags.slice(0, adminTopTagLimit),
+    totalTagCount: allTags.length,
+    hiddenTagCount: Math.max(0, allTags.length - adminTopTagLimit),
+    customPages
   };
 }
 
@@ -312,7 +342,7 @@ export function buildAdminFolderCounts(
     .slice(0, limit);
 }
 
-async function isExistingDirectory(directoryPath: string): Promise<boolean> {
+export async function isExistingDirectory(directoryPath: string): Promise<boolean> {
   const normalizedPath = directoryPath.trim();
   if (normalizedPath === "") {
     return false;
@@ -335,7 +365,7 @@ async function readOptionalFileInfo(filePath: string): Promise<{ exists: boolean
   }
 }
 
-function getLatestUpdatedAtLabel(entries: readonly MemoIndexedEntry[]): string {
+export function getLatestUpdatedAtLabel(entries: readonly MemoIndexedEntry[]): string {
   const latestEntry = [...entries].sort((left, right) => right.mtime.getTime() - left.mtime.getTime())[0];
   return latestEntry ? format(latestEntry.mtime, "yyyy-MM-dd HH:mm") : "n/a";
 }
@@ -350,4 +380,121 @@ function formatFileSize(size: number): string {
   }
 
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function collectPageDirectoryCandidates(
+  settings: Pick<MemoBoxSettings, "memodir" | "metaDir">,
+  workspacePageDirectories: readonly string[]
+): readonly string[] {
+  const dirs: string[] = [];
+  const memodir = settings.memodir.trim();
+  if (memodir !== "") {
+    dirs.push(getPagesDirectory(settings));
+  }
+  for (const dir of workspacePageDirectories) {
+    const trimmed = dir.trim();
+    if (trimmed !== "") {
+      dirs.push(normalize(trimmed));
+    }
+  }
+  const unique = new Map<string, string>();
+  for (const dir of dirs) {
+    unique.set(normalizeFilePathForComparison(dir), dir);
+  }
+
+  return [...unique.values()];
+}
+
+export async function buildCustomPages(
+  settings: Pick<MemoBoxSettings, "memodir" | "metaDir">,
+  workspacePageDirectories: readonly string[]
+): Promise<readonly CustomPage[]> {
+  const candidateDirectories = collectPageDirectoryCandidates(settings, workspacePageDirectories);
+  const cacheKey = JSON.stringify({
+    memodir: normalizeFilePathForComparison(settings.memodir),
+    metaDir: settings.metaDir,
+    directories: candidateDirectories.map((dir) => normalizeFilePathForComparison(dir))
+  });
+  const now = Date.now();
+  if (customPagesCache && customPagesCache.key === cacheKey && customPagesCache.expiresAt > now) {
+    return customPagesCache.pages;
+  }
+
+  const seenPaths = new Set<string>();
+  const assets: { readonly absolutePath: string; readonly name: string }[] = [];
+  const scanned: Array<{ readonly directory: string; readonly exists: boolean; readonly htmlCount: number }> = [];
+
+  for (const dir of candidateDirectories) {
+    let exists = false;
+    try {
+      exists = (await stat(dir)).isDirectory();
+    } catch {
+      exists = false;
+    }
+
+    const found = exists ? await listPageHtmlFiles(dir) : [];
+    scanned.push({ directory: dir, exists, htmlCount: found.length });
+    for (const page of found) {
+      const key = normalizeFilePathForComparison(page.absolutePath);
+      if (!seenPaths.has(key)) {
+        seenPaths.add(key);
+        assets.push(page);
+      }
+    }
+  }
+
+  assets.sort((left, right) => left.name.localeCompare(right.name));
+
+  const usedTabIds = new Set<string>();
+  const pages: CustomPage[] = [];
+
+  for (const asset of assets) {
+    try {
+      const raw = await readFile(asset.absolutePath, "utf8");
+      const { title, body } = parseCustomPageContent(raw, asset.name);
+      let id = basename(asset.name, ".html").replace(/[^a-zA-Z0-9_-]/g, "_");
+      if (id === "") {
+        id = "page";
+      }
+      let uniqueId = id;
+      let suffix = 0;
+      while (usedTabIds.has(uniqueId)) {
+        suffix += 1;
+        uniqueId = `${id}_${suffix}`;
+      }
+      usedTabIds.add(uniqueId);
+
+      pages.push({ id: uniqueId, title, htmlBody: body, absolutePath: asset.absolutePath });
+    } catch {
+      continue;
+    }
+  }
+
+  logMemoBoxInfo("pages.scan", "Custom pages scan completed.", {
+    memodir: settings.memodir,
+    metaDir: settings.metaDir,
+    workspacePageDirectories,
+    candidatesScanned: scanned,
+    foundHtmlAssets: assets.length,
+    builtPages: pages.length
+  });
+
+  customPagesCache = {
+    key: cacheKey,
+    pages,
+    expiresAt: now + customPagesCacheTtlMs
+  };
+
+  return pages;
+}
+
+export function parseCustomPageContent(
+  raw: string,
+  fileName: string
+): { title: string; body: string } {
+  const titleMatch = raw.match(/^<!--\s*title:\s*(.+?)\s*-->/);
+  const title = titleMatch ? titleMatch[1]! : basename(fileName, ".html");
+  const body = titleMatch ? raw.slice(titleMatch[0].length).trimStart() : raw;
+
+  return { title, body };
 }

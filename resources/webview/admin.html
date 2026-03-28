@@ -15,15 +15,20 @@
       <section class="overview" data-testid="admin-hero">
         <div class="overview-header">
           <div>
-            <span class="eyebrow">MemoBox v{{VERSION}}</span>
-            <h1 data-testid="admin-title">{{OVERVIEW_TITLE}}</h1>
-            <p class="overview-copy">
-              {{OVERVIEW_COPY}}
-            </p>
+            <div class="title-row">
+              <span class="title-icon" aria-hidden="true">
+                <svg viewBox="0 0 256 256" focusable="false">
+                  <rect x="16" y="16" width="224" height="224" rx="48" fill="#111827" stroke="#1f2937" stroke-width="2"></rect>
+                  <path d="M88 144V56h56l32 32v56" fill="none" stroke="#c084fc" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="M144 56v32h32" fill="none" stroke="#c084fc" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="M108 104h24M108 128h48" fill="none" stroke="#c084fc" stroke-width="12" stroke-linecap="round"></path>
+                  <path d="M52 144h152v44c0 8.8-7.2 16-16 16H68c-8.8 0-16-7.2-16-16z" fill="none" stroke="#38bdf8" stroke-width="12" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+              <h1 data-testid="admin-title">MemoBox v{{VERSION}}</h1>
+            </div>
             <p class="overview-meta">
-              {{LAST_REFRESHED_LABEL}}: {{GENERATED_AT}}<br />
-              {{DATA_SOURCE_LABEL}}: {{INDEX_SOURCE}}<br />
-              {{SCOPE_LABEL}}: {{MEMO_SCOPE}}
+              {{LAST_REFRESHED_LABEL}}: {{GENERATED_AT}}
             </p>
           </div>
         </div>
@@ -135,6 +140,8 @@
 {{SNIPPET_SECTION}}
             </div>
           </article>
+
+{{CUSTOM_PAGE_LINKS}}
         </div>
       </section>
 

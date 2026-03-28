@@ -7,6 +7,15 @@ export type MemoBoxUiLanguage = "ja" | "en";
 
 export interface MemoBoxUiText {
   formatMemoRootRisk(_riskCode: MemoRootRiskCode): string;
+  readonly pages: {
+    readonly commandTitle: string;
+    readonly noPagesFound: string;
+    readonly pickerPlaceholder: string;
+    readonly panelSectionTitle: string;
+    pageCount(_count: number): string;
+    readonly blockedCommand: string;
+    readonly blockedPath: string;
+  };
   readonly admin: {
     readonly pageTitle: string;
     panelTitle(_version: string): string;
@@ -81,6 +90,8 @@ export interface MemoBoxUiText {
     readonly tagsSubtitle: string;
     readonly tagsMeta: string;
     readonly tagsEmpty: string;
+    readonly browseAllTags: string;
+    showTagMemos(_tag: string): string;
     readonly workspaceStatusTitle: string;
     readonly workspaceStatusSubtitle: string;
     readonly kvMemoRoot: string;
@@ -215,9 +226,18 @@ const englishText: MemoBoxUiText = {
         return riskCode;
     }
   },
+  pages: {
+    commandTitle: "MemoBox: Open Custom Page",
+    noPagesFound: "No custom pages found.",
+    pickerPlaceholder: "Select a custom page to open",
+    panelSectionTitle: "Custom Pages",
+    pageCount: (count) => `${count} page${count === 1 ? "" : "s"}`,
+    blockedCommand: "MemoBox: This custom page tried to run a command that is not allowed.",
+    blockedPath: "MemoBox: This custom page tried to access a path outside the allowed roots."
+  },
   admin: {
     pageTitle: "MemoBox",
-    panelTitle: (version) => `MemoBox ${version}`,
+    panelTitle: (version) => `MemoBox v${version}`,
     overviewTitle: "Memo Overview",
     overviewCopy: "Review memo availability, recent changes, and maintenance status before jumping into the next action.",
     lastRefreshedLabel: "Last refreshed",
@@ -289,6 +309,8 @@ const englishText: MemoBoxUiText = {
     tagsSubtitle: "Frontmatter tags aggregated from the current memo index.",
     tagsMeta: "Use tags to jump into grouped memo files without a free-text search.",
     tagsEmpty: "Tags appear here when memo frontmatter includes tags.",
+    browseAllTags: "Browse All Tags",
+    showTagMemos: (tag) => `Show memos tagged with #${tag}`,
     workspaceStatusTitle: "Workspace Status",
     workspaceStatusSubtitle: "Current paths and defaults used by memo commands.",
     kvMemoRoot: "Memo Root",
@@ -411,9 +433,18 @@ const japaneseText: MemoBoxUiText = {
         return riskCode;
     }
   },
+  pages: {
+    commandTitle: "MemoBox: カスタムページを開く",
+    noPagesFound: "カスタムページが見つかりませんでした。",
+    pickerPlaceholder: "開くカスタムページを選択してください",
+    panelSectionTitle: "カスタムページ",
+    pageCount: (count) => `${count} ページ`,
+    blockedCommand: "MemoBox: このカスタムページからは許可されていないコマンドは実行できません。",
+    blockedPath: "MemoBox: このカスタムページからは許可された範囲外のパスへアクセスできません。"
+  },
   admin: {
     pageTitle: "MemoBox",
-    panelTitle: (version) => `MemoBox 管理画面 ${version}`,
+    panelTitle: (version) => `MemoBox 管理画面 v${version}`,
     overviewTitle: "メモの概要",
     overviewCopy: "次の操作に進む前に、メモの利用状況、最近の更新、保守状態を確認します。",
     lastRefreshedLabel: "最終更新",
@@ -483,8 +514,10 @@ const japaneseText: MemoBoxUiText = {
     folderSummaryEmpty: "メモを作成すると、ここにフォルダ集計が表示されます。",
     tagsTitle: "タグ",
     tagsSubtitle: "現在のメモインデックスから frontmatter の tags を集計します。",
-    tagsMeta: "フリーテキスト検索をせずに、タグ単位でメモへ移動できます。",
+    tagsMeta: "タグごとにメモを開けます。件数が多い場合は一覧ブラウザへ移動してください。",
     tagsEmpty: "frontmatter に tags が含まれるメモがあると、ここに表示されます。",
+    browseAllTags: "すべてのタグを開く",
+    showTagMemos: (tag) => `#${tag} のメモを開く`,
     workspaceStatusTitle: "ワークスペース状態",
     workspaceStatusSubtitle: "メモコマンドが参照している現在のパスと既定値です。",
     kvMemoRoot: "メモルート",

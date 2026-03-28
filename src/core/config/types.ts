@@ -57,6 +57,7 @@ export interface MemoBoxSettings {
   readonly memoNewFilenameDateSuffix: string;
   readonly locale: MemoBoxLocale;
   readonly logLevel: MemoBoxLogLevel;
+  readonly slashCommandsEnabled: boolean;
   readonly aiEnabled: boolean;
   readonly aiCostMode?: MemoBoxAiCostMode;
   readonly aiPerRequestLimitUsd?: number;

@@ -1,4 +1,4 @@
-import { applyTemplateVariables, loadWebviewTemplate } from "../../shared/webviewTemplate";
+import { applyTemplateVariables, loadWebviewTemplate, type TemplateLoopItem } from "../../shared/webviewTemplate";
 import type { MemoBoxUiText } from "../../shared/uiText";
 import type { MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import type {
@@ -9,16 +9,40 @@ import type {
   AdminTemplateAsset
 } from "./adminViewModel";
 
+export type CustomPageModelSlice = Pick<AdminDashboardModel,
+  | "version" | "generatedAtLabel" | "memoRoot" | "todayDirectory"
+  | "todayMemoPath" | "templatePath" | "locale" | "datePathFormat"
+  | "metaDir" | "indexFilePath" | "totalFiles" | "latestUpdatedAtLabel"
+  | "recentFiles" | "pinnedFiles" | "folderCounts" | "topTags"
+  | "templates" | "snippets"
+>;
+
+export function buildCustomPageVariables(model: CustomPageModelSlice): Record<string, string> {
+  return {
+    VERSION: escapeHtml(model.version),
+    GENERATED_AT: escapeHtml(model.generatedAtLabel),
+    MEMO_ROOT: escapeHtml(model.memoRoot || "n/a"),
+    TODAY_DIRECTORY: escapeHtml(model.todayDirectory || "n/a"),
+    TODAY_MEMO_PATH: escapeHtml(model.todayMemoPath || "n/a"),
+    DEFAULT_TEMPLATE: escapeHtml(model.templatePath || "n/a"),
+    TOTAL_FILES: escapeHtml(String(model.totalFiles)),
+    LATEST_UPDATED_AT: escapeHtml(model.latestUpdatedAtLabel),
+    LOCALE: escapeHtml(model.locale),
+    DATE_PATH_FORMAT: escapeHtml(model.datePathFormat),
+    META_DIR: escapeHtml(model.metaDir),
+    INDEX_SOURCE: escapeHtml(model.indexFilePath || "n/a"),
+    MEMO_SCOPE: escapeHtml(model.memoRoot || "memobox.memodir is not set")
+  };
+}
+
 export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: MemoBoxUiText): string {
   const template = loadWebviewTemplate("admin.html");
   const css = loadWebviewTemplate("admin.css");
   const text = ui.admin;
 
-  return applyTemplateVariables(template, {
-    NONCE: nonce,
-    CSS: css,
+  const contentVariables: Record<string, string> = {
+    ...buildCustomPageVariables(model),
     PAGE_TITLE: escapeHtml(text.pageTitle),
-    VERSION: escapeHtml(model.version),
     OVERVIEW_TITLE: escapeHtml(text.overviewTitle),
     OVERVIEW_COPY: escapeHtml(text.overviewCopy),
     LAST_REFRESHED_LABEL: escapeHtml(text.lastRefreshedLabel),
@@ -40,7 +64,7 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
     FOLDER_SUMMARY_META: escapeHtml(text.folderSummaryMeta),
     TAGS_TITLE: escapeHtml(text.tagsTitle),
     TAGS_SUBTITLE: escapeHtml(text.tagsSubtitle),
-    TAGS_META: escapeHtml(text.tagsMeta),
+    TAGS_META: escapeHtml(buildTagsMeta(model, ui)),
     RECENT_MEMOS: renderMemoItems(model.recentFiles, text.noIndexedFiles, ui),
     PINNED_MEMOS: renderMemoItems(model.pinnedFiles, text.noPinnedFiles, ui),
     FOLDER_ROWS: renderFolderRows(model.folderCounts, model.totalFiles, ui),
@@ -82,8 +106,63 @@ export function renderAdminHtml(model: AdminDashboardModel, nonce: string, ui: M
     SNIPPETS_SUBTITLE: escapeHtml(text.snippetsSubtitle),
     TEMPLATE_SECTION: renderTemplateSection(model, ui),
     SNIPPET_SECTION: renderSnippetSection(model, ui),
-    SCRIPT: buildAdminScript()
+    CUSTOM_PAGE_LINKS: renderCustomPageLinks(model, ui),
+    TOTAL_FILES: escapeHtml(String(model.totalFiles)),
+    LATEST_UPDATED_AT: escapeHtml(model.latestUpdatedAtLabel),
+    LOCALE: escapeHtml(model.locale),
+    DATE_PATH_FORMAT: escapeHtml(model.datePathFormat),
+    META_DIR: escapeHtml(model.metaDir)
+  };
+
+  const html = applyTemplateVariables(template, {
+    NONCE: nonce,
+    CSS: css,
+    SCRIPT: buildAdminScript(),
+    ...contentVariables
   });
+
+  return html;
+}
+
+export function buildContentLoops(model: CustomPageModelSlice): Record<string, readonly TemplateLoopItem[]> {
+  return {
+    RECENT_FILES: model.recentFiles.map((f) => ({
+      relativePath: f.relativePath,
+      absolutePath: f.absolutePath,
+      parentDirectory: f.parentDirectory,
+      updatedAt: f.updatedAtLabel,
+      isPinned: f.isPinned
+    })),
+    PINNED_FILES: model.pinnedFiles.map((f) => ({
+      relativePath: f.relativePath,
+      absolutePath: f.absolutePath,
+      parentDirectory: f.parentDirectory,
+      updatedAt: f.updatedAtLabel,
+      isPinned: f.isPinned
+    })),
+    FOLDER_COUNTS: model.folderCounts.map((f) => ({
+      label: f.label,
+      count: f.count
+    })),
+    TOP_TAGS: model.topTags.map((t) => ({
+      tag: t.tag,
+      count: t.count
+    })),
+    TEMPLATES: model.templates.map((t) => ({
+      name: t.name,
+      absolutePath: t.absolutePath,
+      size: t.sizeLabel,
+      updatedAt: t.updatedAtLabel,
+      isDefault: t.isDefault
+    })),
+    SNIPPETS: model.snippets.map((s) => ({
+      name: s.name,
+      absolutePath: s.absolutePath,
+      size: s.sizeLabel,
+      updatedAt: s.updatedAtLabel,
+      snippetCount: s.snippetCount
+    }))
+  };
 }
 
 function renderActionButtons(model: AdminDashboardModel, ui: MemoBoxUiText): string {
@@ -349,6 +428,15 @@ function buildAdminScript(): string {
             }
 
             vscode.postMessage({ type: "useRecommendedMemoRoot", path });
+          });
+        });
+
+        document.querySelectorAll("[data-open-custom-page]").forEach((element) => {
+          element.addEventListener("click", () => {
+            const path = element.getAttribute("data-open-custom-page");
+            if (path) {
+              vscode.postMessage({ type: "openCustomPage", path });
+            }
           });
         });
   `.trim();
@@ -689,20 +777,44 @@ function renderTagRows(model: AdminDashboardModel, ui: MemoBoxUiText): string {
     return `<p class="empty-copy">${escapeHtml(text.tagsEmpty)}</p>`;
   }
 
-  return model.topTags
+  const rows = model.topTags
     .map(
       (tagRow) => `
-        <li class="folder-row">
-          <button class="item-link" data-open-tag="${escapeHtml(tagRow.tag)}">
-            <span class="folder-name">#${escapeHtml(tagRow.tag)}</span>
-          </button>
-          <span class="folder-meta">
-            <span>${escapeHtml(text.memos(tagRow.count))}</span>
-          </span>
+        <li class="item-card tag-card">
+          <div class="item-row">
+            <button class="item-link tag-link" data-open-tag="${escapeHtml(tagRow.tag)}" title="${escapeHtml(text.showTagMemos(tagRow.tag))}">
+              <span class="item-link-inner">
+                <span class="item-path">#${escapeHtml(tagRow.tag)}</span>
+              </span>
+            </button>
+            <div class="item-actions">
+              <span class="tag-count-badge">${escapeHtml(text.memos(tagRow.count))}</span>
+            </div>
+          </div>
         </li>
       `
     )
     .join("");
+
+  return `
+    ${rows}
+    <li class="tag-footer-row">
+      <button class="mini-button" data-command="memobox.listTags">${escapeHtml(text.browseAllTags)}</button>
+    </li>
+  `;
+}
+
+function buildTagsMeta(model: AdminDashboardModel, ui: MemoBoxUiText): string {
+  const base = ui.admin.tagsMeta;
+  if (model.totalTagCount === 0) {
+    return base;
+  }
+
+  if (model.hiddenTagCount === 0) {
+    return `${base} (${model.totalTagCount})`;
+  }
+
+  return `${base} (${model.topTags.length}/${model.totalTagCount}, +${model.hiddenTagCount})`;
 }
 
 function renderAdminOpenOnStartupControl(model: AdminDashboardModel, ui: MemoBoxUiText): string {
@@ -772,6 +884,37 @@ function renderToneBadge(label: string, tone: "good" | "warning" | "danger" | "d
 
   const dot = dotClass === "" ? "" : `<span class="status-dot ${dotClass}" aria-hidden="true"></span>`;
   return `<span class="status-badge">${dot}${escapeHtml(label)}</span>`;
+}
+
+function renderCustomPageLinks(model: AdminDashboardModel, ui: MemoBoxUiText): string {
+  if (model.customPages.length === 0) {
+    return "";
+  }
+
+  const items = model.customPages
+    .map(
+      (page) => `
+          <li class="item-card">
+            <div class="item-row">
+              <button class="item-link" data-open-custom-page="${escapeHtml(page.absolutePath)}">
+                <span class="item-link-inner">
+                  <span class="item-path">${escapeHtml(page.title)}</span>
+                  <span class="item-meta">${escapeHtml(page.absolutePath)}</span>
+                </span>
+              </button>
+            </div>
+          </li>`
+    )
+    .join("");
+
+  return `
+          <article class="panel" data-testid="custom-pages-panel">
+            <div class="panel-head">
+              <h2>${escapeHtml(ui.pages.panelSectionTitle)}</h2>
+              <p class="panel-subtitle">${escapeHtml(ui.pages.pageCount(model.customPages.length))}</p>
+            </div>
+            <ul class="recent-list">${items}</ul>
+          </article>`;
 }
 
 function escapeHtml(value: string): string {

@@ -11,9 +11,14 @@ import { suggestTemplateCommand } from "./features/ai/suggestTemplateCommand";
 import { summarizeMemoCommand } from "./features/ai/summarizeMemoCommand";
 import { translateMemoCommand } from "./features/ai/translateMemoCommand";
 import { grepMemosCommand } from "./features/commands/grepMemosCommand";
+import { alignSelectedCsvCommand } from "./features/commands/alignSelectedCsvCommand";
+import { formatMarkdownTableCommand } from "./features/commands/formatMarkdownTableCommand";
+import { insertFootnoteCommand } from "./features/commands/insertFootnoteCommand";
 import { insertMemoLinkCommand } from "./features/commands/insertMemoLinkCommand";
 import { listMemos } from "./features/commands/listMemosCommand";
 import { listTagsCommand } from "./features/commands/listTagsCommand";
+import { openOrCreateWikiMemoCommand } from "./features/commands/openOrCreateWikiMemoCommand";
+import { showBacklinksCommand } from "./features/commands/showBacklinksCommand";
 import { createWorkspaceCommand } from "./features/commands/createWorkspaceCommand";
 import { clearIndexCacheCommand } from "./features/commands/clearIndexCacheCommand";
 import { newMemo } from "./features/commands/newMemoCommand";
@@ -28,6 +33,7 @@ import { redateMemoCommand } from "./features/commands/redateMemoCommand";
 import { relatedMemosCommand } from "./features/commands/relatedMemosCommand";
 import { todoMemosCommand } from "./features/commands/todoMemosCommand";
 import { openAdmin } from "./features/admin/openAdminCommand";
+import { openCustomPagePicker } from "./features/pages/openCustomPageCommand";
 import { openSetup } from "./features/setup/openSetupCommand";
 import { showMemoBoxAiLogs, showMemoBoxLogs } from "./shared/logging";
 
@@ -47,6 +53,21 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("memobox.insertMemoLink", async () => {
       await insertMemoLinkCommand();
+    }),
+    vscode.commands.registerCommand("memobox.showBacklinks", async () => {
+      await showBacklinksCommand();
+    }),
+    vscode.commands.registerCommand("memobox.openOrCreateWikiMemo", async () => {
+      await openOrCreateWikiMemoCommand();
+    }),
+    vscode.commands.registerCommand("memobox.alignSelectedCsv", async () => {
+      await alignSelectedCsvCommand();
+    }),
+    vscode.commands.registerCommand("memobox.formatMarkdownTable", async () => {
+      await formatMarkdownTableCommand();
+    }),
+    vscode.commands.registerCommand("memobox.insertFootnote", async () => {
+      await insertFootnoteCommand();
     }),
     vscode.commands.registerCommand("memobox.createWorkspace", async () => {
       await createWorkspaceCommand();
@@ -95,6 +116,9 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("memobox.openSetup", () => {
       void openSetup(context);
+    }),
+    vscode.commands.registerCommand("memobox.openCustomPage", async () => {
+      await openCustomPagePicker(context);
     }),
     vscode.commands.registerCommand("memobox.aiAutoTag", async () => {
       await autoTagMemoCommand();
@@ -155,6 +179,21 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("extension.memoInsertLink", async () => {
       await insertMemoLinkCommand();
+    }),
+    vscode.commands.registerCommand("extension.memoBacklinks", async () => {
+      await showBacklinksCommand();
+    }),
+    vscode.commands.registerCommand("extension.memoOpenOrCreateWikiMemo", async () => {
+      await openOrCreateWikiMemoCommand();
+    }),
+    vscode.commands.registerCommand("extension.memoAlignSelectedCsv", async () => {
+      await alignSelectedCsvCommand();
+    }),
+    vscode.commands.registerCommand("extension.memoFormatMarkdownTable", async () => {
+      await formatMarkdownTableCommand();
+    }),
+    vscode.commands.registerCommand("extension.memoInsertFootnote", async () => {
+      await insertFootnoteCommand();
     }),
     vscode.commands.registerCommand("extension.memoOpenFolder", async () => {
       await openMemoFolderCommand();
