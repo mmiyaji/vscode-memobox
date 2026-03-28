@@ -74,7 +74,7 @@ test("buildQuickMemoInitialContent uses the preferred memo template for the firs
 
     const content = await buildQuickMemoInitialContent(createSettings(memodir), new Date(2026, 2, 22));
 
-    assert.match(content, /^---\ntitle: '2026-03-22'\ntags:\n  - inbox\ndate: 2026-03-22\n---\n\n# 2026-03-22 2026-03-22\n/u);
+    assert.match(content, /^---\ntitle: '2026-03-22'\ntags:\n {2}- inbox\ndate: 2026-03-22\n---\n\n# 2026-03-22 2026-03-22\n/u);
   } finally {
     await rm(memodir, { force: true, recursive: true });
   }

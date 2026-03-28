@@ -149,6 +149,8 @@ test("renderAdminHtml shows localized broad-root reasons", () => {
     recentFiles: [],
     folderCounts: [],
     topTags: [],
+    totalTagCount: 0,
+    hiddenTagCount: 0,
     customPages: []
   };
 
@@ -210,6 +212,8 @@ test("renderAdminHtml shows custom page links", () => {
     recentFiles: [],
     folderCounts: [],
     topTags: [],
+    totalTagCount: 0,
+    hiddenTagCount: 0,
     customPages: [
       {
         id: "my_page",
@@ -283,6 +287,8 @@ test("buildCustomPageVariables expands model values for custom pages", () => {
     recentFiles: [],
     folderCounts: [],
     topTags: [],
+    totalTagCount: 0,
+    hiddenTagCount: 0,
     customPages: []
   };
 
@@ -454,6 +460,8 @@ function createEnglishUiText(): MemoBoxUiText {
       tagsSubtitle: "Tags subtitle.",
       tagsMeta: "Tags meta.",
       tagsEmpty: "No tags.",
+      browseAllTags: "Browse All Tags",
+      showTagMemos: (tag) => `Show memos tagged with #${tag}`,
       workspaceStatusTitle: "Workspace Status",
       workspaceStatusSubtitle: "Workspace subtitle.",
       kvMemoRoot: "Memo Root",
