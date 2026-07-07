@@ -2,7 +2,7 @@
   "name": "vscode-memobox",
   "displayName": "MemoBox",
   "description": "A maintainable daily memo workflow extension for VS Code.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "mmiyaji",
   "icon": "media/memobox.png",
   "license": "MIT",
