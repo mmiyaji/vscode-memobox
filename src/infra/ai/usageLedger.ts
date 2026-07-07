@@ -17,7 +17,7 @@ interface MemoBoxAiUsageLedger {
   months: Record<string, MemoBoxAiUsageLedgerMonth>;
 }
 
-const emptyLedger: MemoBoxAiUsageLedger = { months: {} };
+const ledgerWriteChains = new Map<string, Promise<unknown>>();
 
 export interface MemoBoxAiUsageMonthSummary {
   readonly periodKey: string;
@@ -54,6 +54,34 @@ export async function recordAiUsage(
   settings: Pick<MemoBoxSettings, "memodir" | "metaDir">,
   estimate: MemoBoxAiCostEstimate,
   now: Date = new Date()
+): Promise<MemoBoxAiUsageMonthSummary> {
+  const ledgerFilePath = getAiUsageLedgerFilePath(settings);
+  const previousWrite = ledgerWriteChains.get(ledgerFilePath) ?? Promise.resolve();
+  const nextWrite = previousWrite
+    .catch(() => undefined)
+    .then(async () => await recordAiUsageUnlocked(settings, estimate, now));
+
+  ledgerWriteChains.set(ledgerFilePath, nextWrite);
+  void nextWrite.then(
+    () => {
+      if (ledgerWriteChains.get(ledgerFilePath) === nextWrite) {
+        ledgerWriteChains.delete(ledgerFilePath);
+      }
+    },
+    () => {
+      if (ledgerWriteChains.get(ledgerFilePath) === nextWrite) {
+        ledgerWriteChains.delete(ledgerFilePath);
+      }
+    }
+  );
+
+  return await nextWrite;
+}
+
+async function recordAiUsageUnlocked(
+  settings: Pick<MemoBoxSettings, "memodir" | "metaDir">,
+  estimate: MemoBoxAiCostEstimate,
+  now: Date
 ): Promise<MemoBoxAiUsageMonthSummary> {
   const ledger = await readAiUsageLedger(settings);
   const periodKey = formatUsageMonthKey(now);
@@ -95,7 +123,7 @@ async function readAiUsageLedger(settings: Pick<MemoBoxSettings, "memodir" | "me
     const raw = await readFile(getAiUsageLedgerFilePath(settings), "utf8");
     const parsed = JSON.parse(raw) as Partial<MemoBoxAiUsageLedger>;
     if (!parsed || typeof parsed !== "object" || typeof parsed.months !== "object" || parsed.months === null) {
-      return { ...emptyLedger };
+      return createEmptyLedger();
     }
 
     return {
@@ -110,8 +138,12 @@ async function readAiUsageLedger(settings: Pick<MemoBoxSettings, "memodir" | "me
       )
     };
   } catch {
-    return { ...emptyLedger };
+    return createEmptyLedger();
   }
+}
+
+function createEmptyLedger(): MemoBoxAiUsageLedger {
+  return { months: {} };
 }
 
 function formatUsageMonthKey(now: Date): string {

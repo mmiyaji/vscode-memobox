@@ -1,4 +1,5 @@
 import { applyTemplateVariables, loadWebviewTemplate } from "../../shared/webviewTemplate";
+import { escapeHtml } from "../../shared/webviewSecurity";
 import type { MemoBoxUiText } from "../../shared/uiText";
 import type { MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import type { SetupViewModel } from "./setupViewModel";
@@ -289,13 +290,4 @@ function buildSetupScript(): string {
       });
     });
   `.trim();
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }

@@ -7,6 +7,7 @@ import type { MemoBoxSettings } from "../../core/config/types";
 import { getExtensionDisplayVersion } from "../../shared/extensionInfo";
 import { getMemoBoxUiText, resolveUiLanguage } from "../../shared/uiText";
 import { applyTemplateVariables, extractTemplateKeys, loadWebviewTemplate } from "../../shared/webviewTemplate";
+import { createCspNonce, escapeHtml } from "../../shared/webviewSecurity";
 import { buildCustomPages, parseCustomPageContent } from "../admin/adminViewModel";
 import { buildCustomPageVariables, buildContentLoops } from "../admin/adminHtml";
 import { resolveRequiredGroups, buildCustomPageDataModel } from "./customPageDataGroups";
@@ -136,7 +137,7 @@ class MemoCustomPagePanel {
 
     const wrapper = loadWebviewTemplate("customPage.html");
     const css = loadWebviewTemplate("admin.css");
-    const nonce = getNonce();
+    const nonce = createCspNonce();
 
     this.panel.title = title;
     this.panel.webview.html = applyTemplateVariables(wrapper, {
@@ -245,17 +246,4 @@ function isCustomPageMessage(value: unknown): value is CustomPageMessage {
     return typeof candidate.path === "string";
   }
   return false;
-}
-
-function getNonce(): string {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }

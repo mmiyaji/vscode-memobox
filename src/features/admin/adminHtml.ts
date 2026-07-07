@@ -1,4 +1,5 @@
 import { applyTemplateVariables, loadWebviewTemplate, type TemplateLoopItem } from "../../shared/webviewTemplate";
+import { escapeHtml } from "../../shared/webviewSecurity";
 import type { MemoBoxUiText } from "../../shared/uiText";
 import type { MemoRootRiskCode } from "../../core/memo/memoRootGuard";
 import type {
@@ -279,13 +280,13 @@ function renderSummaryCards(model: AdminDashboardModel, ui: MemoBoxUiText): stri
     {
       label: text.summaryIndexedMemos,
       value: String(model.totalFiles),
-      detail: escapeHtml(text.summaryLatestUpdate(model.latestUpdatedAtLabel)),
+      detail: text.summaryLatestUpdate(model.latestUpdatedAtLabel),
       tone: "default"
     },
     {
       label: text.summaryMemoIndex,
       value: model.indexFileExists ? text.summaryAvailable : text.summaryNotCreated,
-      detail: `${escapeHtml(model.indexFileSizeLabel)} | ${escapeHtml(model.indexFilePath || text.notAvailable)}`,
+      detail: `${model.indexFileSizeLabel} | ${model.indexFilePath || text.notAvailable}`,
       tone: model.indexFileExists ? "good" : "warning"
     },
     {
@@ -313,7 +314,7 @@ function renderSummaryCards(model: AdminDashboardModel, ui: MemoBoxUiText): stri
             ${renderToneBadge(card.value, card.tone)}
           </div>
           <span class="summary-value" ${index === 1 ? 'data-testid="indexed-files-value"' : ""}>${escapeHtml(card.value)}</span>
-          <span class="summary-detail">${card.detail}</span>
+          <span class="summary-detail">${escapeHtml(card.detail)}</span>
         </article>
       `
     )
@@ -465,17 +466,17 @@ function renderBroadRootRecommendationLine(recommendedMemoRoot: string, ui: Memo
 function buildAiDetail(model: AdminDashboardModel, ui: MemoBoxUiText): string {
   const text = ui.admin;
   if (!model.aiEnabled) {
-    return escapeHtml(text.summaryAiDisabledDetail);
+    return text.summaryAiDisabledDetail;
   }
 
   if (!model.aiConfigured) {
-    return escapeHtml(model.aiIssueSummary || text.summaryAiNeedsSetupDetail);
+    return model.aiIssueSummary || text.summaryAiNeedsSetupDetail;
   }
 
   return [
-    escapeHtml(model.aiProfileName),
-    escapeHtml(model.aiModel),
-    escapeHtml(text.summaryAiKey(getAiApiKeySourceLabel(model, ui)))
+    model.aiProfileName,
+    model.aiModel,
+    text.summaryAiKey(getAiApiKeySourceLabel(model, ui))
   ].join(" | ");
 }
 
@@ -875,7 +876,7 @@ function buildMaintenanceDetail(model: AdminDashboardModel, ui: MemoBoxUiText): 
     details.push(text.maintenanceSnippetLoadErrors);
   }
 
-  return escapeHtml(details.join(" | "));
+  return details.join(" | ");
 }
 
 function renderToneBadge(label: string, tone: "good" | "warning" | "danger" | "default"): string {
@@ -915,13 +916,4 @@ function renderCustomPageLinks(model: AdminDashboardModel, ui: MemoBoxUiText): s
             </div>
             <ul class="recent-list">${items}</ul>
           </article>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }

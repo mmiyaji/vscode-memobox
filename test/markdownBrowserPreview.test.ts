@@ -66,6 +66,19 @@ test("renderMarkdownBrowserPreviewHtml renders yaml frontmatter separately befor
   assert.match(html, /<p>Body text<\/p>/);
 });
 
+test("renderMarkdownBrowserPreviewHtml escapes raw html in markdown body", () => {
+  const html = renderMarkdownBrowserPreviewHtml({
+    getText: () => "<script>alert(1)</script>\n\n<img src=x onerror=alert(1)>",
+    fileName: "C:\\memo\\unsafe.md",
+    uri: { scheme: "file", fsPath: "C:\\memo\\unsafe.md" }
+  });
+
+  assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
+  assert.doesNotMatch(html, /<img src=x onerror=alert\(1\)>/);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+});
+
 test("writeMarkdownBrowserPreview writes an html file for the current document contents", async () => {
   const previewPath = await writeMarkdownBrowserPreview({
     getText: () => "Hello **world**",

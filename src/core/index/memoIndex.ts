@@ -531,7 +531,7 @@ async function collectMemoFilesAtDepth(directory: string, settings: MemoBoxSetti
     const absolutePath = normalize(join(directory, entry.name));
 
     if (entry.isDirectory()) {
-      if (entry.isSymbolicLink() || shouldSkipDirectory(entry.name, settings)) {
+      if (shouldSkipDirectory(entry.name, settings)) {
         continue;
       }
 

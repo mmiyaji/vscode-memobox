@@ -1,6 +1,8 @@
 import * as http from "node:http";
 import * as https from "node:https";
+import * as tls from "node:tls";
 import { readFileSync } from "node:fs";
+import type { Socket } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import { defaultAiRetryDelaysMs } from "../../core/config/constants";
 import { shouldBypassProxyHost } from "./network";
@@ -130,44 +132,71 @@ async function sendJsonRequest(
   body: string,
   network: ResolvedNetworkOptions
 ): Promise<string> {
-  return await new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url);
-    const useProxy = network.proxy.trim() !== "" && !shouldBypassProxyHost(parsedUrl.hostname, network.proxyBypass);
-    const proxyUrl = useProxy ? new URL(network.proxy) : undefined;
-    const requestOptions: https.RequestOptions = useProxy
-      ? {
-          method: options.method,
-          headers: {
-            ...options.headers,
-            Host: parsedUrl.host
-          },
-          hostname: proxyUrl?.hostname,
-          port: proxyUrl?.port || (proxyUrl?.protocol === "https:" ? 443 : 80),
-          path: url,
-          protocol: proxyUrl?.protocol
-        }
-      : {
-          method: options.method,
-          headers: options.headers,
-          hostname: parsedUrl.hostname,
-          port: parsedUrl.port,
-          path: parsedUrl.pathname + parsedUrl.search,
-          protocol: parsedUrl.protocol
-        };
+  const parsedUrl = new URL(url);
+  const useProxy = network.proxy.trim() !== "" && !shouldBypassProxyHost(parsedUrl.hostname, network.proxyBypass);
+  const proxyUrl = useProxy ? new URL(network.proxy) : undefined;
+  const ca = readConfiguredCa(network);
 
-    if (!network.tlsRejectUnauthorized) {
-      requestOptions.rejectUnauthorized = false;
-    }
+  if (proxyUrl && parsedUrl.protocol === "https:") {
+    const tunnelSocket = await openHttpsProxyTunnel(parsedUrl, proxyUrl, options.timeoutMs, network, ca);
+    const requestOptions: https.RequestOptions = {
+      method: options.method,
+      headers: options.headers,
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || 443,
+      path: parsedUrl.pathname + parsedUrl.search,
+      protocol: parsedUrl.protocol,
+      agent: false,
+      createConnection: () => tls.connect({
+        socket: tunnelSocket,
+        servername: parsedUrl.hostname,
+        rejectUnauthorized: network.tlsRejectUnauthorized,
+        ca
+      })
+    };
 
-    if (network.tlsCaCert.trim() !== "") {
-      try {
-        requestOptions.ca = readFileSync(network.tlsCaCert);
-      } catch {
-        // Ignore missing CA bundle and let the request fail normally if needed.
+    return await performJsonRequest(parsedUrl, requestOptions, https, options, body, network);
+  }
+
+  const requestOptions: https.RequestOptions = proxyUrl
+    ? {
+        method: options.method,
+        headers: {
+          ...options.headers,
+          Host: parsedUrl.host,
+          ...buildProxyAuthorizationHeader(proxyUrl)
+        },
+        hostname: proxyUrl.hostname,
+        port: proxyUrl.port || (proxyUrl.protocol === "https:" ? 443 : 80),
+        path: url,
+        protocol: proxyUrl.protocol
       }
-    }
+    : {
+        method: options.method,
+        headers: options.headers,
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        path: parsedUrl.pathname + parsedUrl.search,
+        protocol: parsedUrl.protocol
+      };
 
-    const transport = (useProxy ? proxyUrl?.protocol : parsedUrl.protocol) === "https:" ? https : http;
+  const transport = (proxyUrl?.protocol ?? parsedUrl.protocol) === "https:" ? https : http;
+  if (transport === https) {
+    applyTlsOptions(requestOptions, network, ca);
+  }
+
+  return await performJsonRequest(parsedUrl, requestOptions, transport, options, body, network);
+}
+
+async function performJsonRequest(
+  parsedUrl: URL,
+  requestOptions: https.RequestOptions,
+  transport: typeof http | typeof https,
+  options: JsonRequestOptions,
+  body: string,
+  network: ResolvedNetworkOptions
+): Promise<string> {
+  return await new Promise((resolve, reject) => {
     const request = transport.request(requestOptions, (response) => {
       const chunks: Buffer[] = [];
 
@@ -217,6 +246,131 @@ async function sendJsonRequest(
     request.write(body);
     request.end();
   });
+}
+
+async function openHttpsProxyTunnel(
+  parsedUrl: URL,
+  proxyUrl: URL,
+  timeoutMs: number,
+  network: ResolvedNetworkOptions,
+  ca: Buffer | undefined
+): Promise<Socket> {
+  return await new Promise((resolve, reject) => {
+    const targetHost = formatConnectHost(parsedUrl.hostname);
+    const targetPort = parsedUrl.port || "443";
+    const requestOptions: https.RequestOptions = {
+      method: "CONNECT",
+      hostname: proxyUrl.hostname,
+      port: proxyUrl.port || (proxyUrl.protocol === "https:" ? 443 : 80),
+      path: `${targetHost}:${targetPort}`,
+      protocol: proxyUrl.protocol,
+      headers: {
+        Host: `${targetHost}:${targetPort}`,
+        ...buildProxyAuthorizationHeader(proxyUrl)
+      }
+    };
+
+    const proxyTransport = proxyUrl.protocol === "https:" ? https : http;
+    if (proxyTransport === https) {
+      applyTlsOptions(requestOptions, network, ca);
+    }
+
+    const request = proxyTransport.request(requestOptions);
+    const abortHandler = () => {
+      request.destroy(new MemoBoxAiError("AI request was cancelled.", "cancelled"));
+    };
+
+    if (network.signal) {
+      if (network.signal.aborted) {
+        abortHandler();
+        return;
+      }
+
+      network.signal.addEventListener("abort", abortHandler, { once: true });
+    }
+
+    request.on("connect", (response, socket, head) => {
+      if (network.signal) {
+        network.signal.removeEventListener("abort", abortHandler);
+      }
+
+      if (response.statusCode !== 200) {
+        socket.destroy();
+        reject(new MemoBoxAiError(
+          `AI proxy CONNECT failed with status ${response.statusCode ?? 500}.`,
+          "network",
+          response.statusCode
+        ));
+        return;
+      }
+
+      if (head.length > 0) {
+        socket.unshift(head);
+      }
+
+      resolve(socket);
+    });
+
+    request.on("error", (error) => {
+      if (network.signal) {
+        network.signal.removeEventListener("abort", abortHandler);
+      }
+
+      reject(normalizeTransportError(error, network.provider, parsedUrl.toString()));
+    });
+    request.setTimeout(timeoutMs, () => {
+      request.destroy(new MemoBoxAiError(`AI request timed out after ${timeoutMs} ms.`, "timeout"));
+    });
+    request.on("close", () => {
+      if (network.signal) {
+        network.signal.removeEventListener("abort", abortHandler);
+      }
+    });
+    request.end();
+  });
+}
+
+function applyTlsOptions(
+  requestOptions: https.RequestOptions,
+  network: Pick<ResolvedNetworkOptions, "tlsRejectUnauthorized">,
+  ca: Buffer | undefined
+): void {
+  if (!network.tlsRejectUnauthorized) {
+    requestOptions.rejectUnauthorized = false;
+  }
+
+  if (ca) {
+    requestOptions.ca = ca;
+  }
+}
+
+function readConfiguredCa(network: Pick<ResolvedNetworkOptions, "tlsCaCert">): Buffer | undefined {
+  if (network.tlsCaCert.trim() === "") {
+    return undefined;
+  }
+
+  try {
+    return readFileSync(network.tlsCaCert);
+  } catch {
+    // Ignore missing CA bundle and let the request fail normally if needed.
+    return undefined;
+  }
+}
+
+function buildProxyAuthorizationHeader(proxyUrl: URL): Record<string, string> {
+  if (proxyUrl.username === "" && proxyUrl.password === "") {
+    return {};
+  }
+
+  const username = decodeURIComponent(proxyUrl.username);
+  const password = decodeURIComponent(proxyUrl.password);
+  return {
+    "Proxy-Authorization": `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
+  };
+}
+
+function formatConnectHost(hostname: string): string {
+  return hostname.includes(":") && !hostname.startsWith("[") ? `[${hostname}]` : hostname;
 }
 
 async function sendJsonRequestWithRetry(

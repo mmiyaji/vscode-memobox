@@ -7,6 +7,7 @@ import { completeMemoBoxSetup, isReadyMemoRoot, pickMemoRootFromDialog } from ".
 import { createWorkspaceCommand, openWorkspaceFile } from "../commands/createWorkspaceCommand";
 import { getExtensionDisplayVersion } from "../../shared/extensionInfo";
 import { getMemoBoxUiText, resolveUiLanguage } from "../../shared/uiText";
+import { createCspNonce } from "../../shared/webviewSecurity";
 
 const setupViewType = "memobox.setup";
 
@@ -20,8 +21,8 @@ type SetupMessage =
 
 type SetupAllowedCommand = "memobox.openSettings" | "memobox.openMemoFolder" | "memobox.newMemo" | "memobox.openAdmin";
 
-export function openSetup(context: vscode.ExtensionContext): void {
-  void MemoSetupPanel.show(context);
+export async function openSetup(context: vscode.ExtensionContext): Promise<void> {
+  await MemoSetupPanel.show(context);
 }
 
 class MemoSetupPanel {
@@ -72,7 +73,7 @@ class MemoSetupPanel {
     const step = await this.resolveCurrentStep(settings.memodir, workspaceFileExists);
 
     this.panel.title = ui.setup.panelTitle(version);
-    this.panel.webview.html = renderSetupHtml(model, getNonce(), step, ui, resolveUiLanguage(settings.locale));
+    this.panel.webview.html = renderSetupHtml(model, createCspNonce(), step, ui, resolveUiLanguage(settings.locale));
   }
 
   private async handleMessage(message: unknown): Promise<void> {
@@ -223,8 +224,4 @@ function isSetupMessage(value: unknown): value is SetupMessage {
   }
 
   return false;
-}
-
-function getNonce(): string {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 }

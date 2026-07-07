@@ -45,3 +45,37 @@ test("recordAiUsage persists monthly usage totals", async () => {
   assert.equal(summary.totalTokens, 250);
   assert.equal(summary.estimatedCostUsd, 0.35);
 });
+
+test("recordAiUsage serializes concurrent writes for the same ledger", async () => {
+  const memodir = await mkdtemp(join(tmpdir(), "memobox-ai-usage-concurrent-"));
+  const settings = {
+    memodir,
+    metaDir: ".vscode-memobox"
+  };
+  assert.equal((await readAiUsageMonthSummary(settings, new Date("2026-03-24T11:00:00Z"))).requests, 0);
+
+  const requestCounts = await Promise.all(
+    Array.from({ length: 8 }, async () => {
+      const result = await recordAiUsage(
+        settings,
+        {
+          promptTokens: 10,
+          outputTokens: 5,
+          totalTokens: 15,
+          estimatedCostUsd: 0.01,
+          hasPricing: true
+        },
+        new Date("2026-03-24T12:00:00Z")
+      );
+      return result.requests;
+    })
+  );
+
+  assert.deepEqual([...requestCounts].sort((left, right) => left - right), [1, 2, 3, 4, 5, 6, 7, 8]);
+  const summary = await readAiUsageMonthSummary(settings, new Date("2026-03-24T13:00:00Z"));
+  assert.equal(summary.requests, 8);
+  assert.equal(summary.promptTokens, 80);
+  assert.equal(summary.outputTokens, 40);
+  assert.equal(summary.totalTokens, 120);
+  assert.equal(Number(summary.estimatedCostUsd.toFixed(2)), 0.08);
+});

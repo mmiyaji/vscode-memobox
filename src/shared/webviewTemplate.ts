@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { escapeHtml } from "./webviewSecurity";
 
 let memoBoxExtensionPath: string | undefined;
 
@@ -89,12 +90,7 @@ function expandLoopBody(
 }
 
 function escapeLoopValue(value: string | number | boolean): string {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+  return escapeHtml(String(value));
 }
 
 function resolveWebviewTemplatePath(relativePath: string): string {

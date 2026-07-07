@@ -160,6 +160,20 @@ test("renderAdminHtml shows localized broad-root reasons", () => {
   assert.match(html, /Recommended: C:\/Users\/mail\/Documents\/MemoBox/);
 });
 
+test("renderAdminHtml escapes memo root in summary details", () => {
+  const html = renderAdminHtml(
+    createAdminDashboardModel({
+      memoRoot: "C:/memo\"><button data-open-file=\"C:/outside/secret.txt\">open</button>",
+      memoRootReady: true
+    }),
+    "nonce",
+    createEnglishUiText()
+  );
+
+  assert.doesNotMatch(html, /data-open-file="C:\/outside\/secret\.txt"/);
+  assert.match(html, /C:\/memo&quot;&gt;&lt;button data-open-file=&quot;C:\/outside\/secret\.txt&quot;&gt;open&lt;\/button&gt;/);
+});
+
 test("renderAdminHtml shows custom page links", () => {
   const model: AdminDashboardModel = {
     version: "0.1.0",
@@ -358,6 +372,65 @@ test("resolveRequiredGroups includes pinned implies index", () => {
   assert.equal(groups.has("pinned"), true);
   assert.equal(groups.has("index"), true);
 });
+
+function createAdminDashboardModel(overrides: Partial<AdminDashboardModel> = {}): AdminDashboardModel {
+  return {
+    version: "0.1.0",
+    generatedAtLabel: "2026-03-23 10:00",
+    memoRoot: "C:/memo",
+    memoRootReady: true,
+    memoRootLooksBroad: false,
+    memoRootRiskCodes: [],
+    recommendedMemoRoot: "",
+    workspaceFilePath: "C:/memo/MemoBox.code-workspace",
+    workspaceFileExists: false,
+    datePathFormat: "yyyy/MM",
+    metaDir: ".vscode-memobox",
+    locale: "en",
+    adminOpenOnStartup: true,
+    excludeDirectories: [],
+    maxScanDepth: 4,
+    todayDirectory: "C:/memo/2026/03",
+    todayMemoPath: "C:/memo/2026/03/2026-03-23.md",
+    templatePath: "C:/memo/.vscode-memobox/templates/simple.md",
+    hasExplicitTemplateOverride: false,
+    templatesDirectory: "C:/memo/.vscode-memobox/templates",
+    templatesDirectoryReady: true,
+    snippetsDirectory: "C:/memo/.vscode-memobox/snippets",
+    snippetsDirectoryReady: true,
+    templates: [],
+    snippets: [],
+    aiEnabled: false,
+    aiCostMode: "off",
+    aiPerRequestLimitUsd: 0,
+    aiMonthlyLimitUsd: 0,
+    aiConfigured: false,
+    aiProfileName: "",
+    aiProvider: "",
+    aiModel: "",
+    aiEndpoint: "",
+    aiApiKeySource: "none",
+    aiIssueSummary: "",
+    aiMonthlyEstimatedCostUsd: 0,
+    aiMonthlyRequestCount: 0,
+    totalFiles: 0,
+    latestUpdatedAtLabel: "n/a",
+    indexFilePath: "C:/memo/.vscode-memobox/index.json",
+    indexFileExists: true,
+    indexFileSizeLabel: "1.0 KB",
+    indexLoadSource: "primary",
+    indexBackupExists: true,
+    indexTransientBackupExists: false,
+    pinnedFiles: [],
+    recentFiles: [],
+    folderCounts: [],
+    topTags: [],
+    totalTagCount: 0,
+    hiddenTagCount: 0,
+    customPages: [],
+    ...overrides
+  };
+}
 
 function createEnglishUiText(): MemoBoxUiText {
   return {

@@ -35,207 +35,112 @@ import { todoMemosCommand } from "./features/commands/todoMemosCommand";
 import { openAdmin } from "./features/admin/openAdminCommand";
 import { openCustomPagePicker } from "./features/pages/openCustomPageCommand";
 import { openSetup } from "./features/setup/openSetupCommand";
-import { showMemoBoxAiLogs, showMemoBoxLogs } from "./shared/logging";
+import { logMemoBoxError, showMemoBoxAiLogs, showMemoBoxLogs } from "./shared/logging";
+
+// eslint-disable-next-line no-unused-vars
+type CommandHandler = (...args: unknown[]) => unknown | Promise<unknown>;
+
+interface CommandRegistration {
+  readonly command: string;
+  readonly handler: CommandHandler;
+}
 
 export function registerCommands(context: vscode.ExtensionContext): void {
+  const registrations: readonly CommandRegistration[] = [
+    { command: "memobox.newMemo", handler: async () => await newMemo() },
+    { command: "memobox.quickMemo", handler: async () => await quickMemo() },
+    { command: "memobox.listMemos", handler: async () => await listMemos() },
+    { command: "memobox.listTags", handler: async () => await listTagsCommand() },
+    { command: "memobox.insertMemoLink", handler: async () => await insertMemoLinkCommand() },
+    { command: "memobox.showBacklinks", handler: async () => await showBacklinksCommand() },
+    { command: "memobox.openOrCreateWikiMemo", handler: async () => await openOrCreateWikiMemoCommand() },
+    { command: "memobox.alignSelectedCsv", handler: async () => await alignSelectedCsvCommand() },
+    { command: "memobox.formatMarkdownTable", handler: async () => await formatMarkdownTableCommand() },
+    { command: "memobox.insertFootnote", handler: async () => await insertFootnoteCommand() },
+    { command: "memobox.createWorkspace", handler: async () => await createWorkspaceCommand() },
+    { command: "memobox.grepMemos", handler: async () => await grepMemosCommand() },
+    { command: "memobox.todoMemos", handler: async () => await todoMemosCommand() },
+    { command: "memobox.relatedMemos", handler: async () => await relatedMemosCommand() },
+    { command: "memobox.redateMemo", handler: async () => await redateMemoCommand() },
+    { command: "memobox.refreshIndex", handler: async () => await refreshIndexCommand() },
+    { command: "memobox.rebuildIndex", handler: async () => await rebuildIndexCommand() },
+    { command: "memobox.clearIndexCache", handler: async () => await clearIndexCacheCommand() },
+    { command: "memobox.openMemoFolder", handler: async () => await openMemoFolderCommand() },
+    { command: "memobox.openMarkdownInBrowser", handler: async () => await openMarkdownInBrowserCommand() },
+    { command: "memobox.openCommandLauncher", handler: async () => await openCommandLauncherCommand() },
+    { command: "memobox.openSettings", handler: async () => await openSettingsCommand() },
+    { command: "memobox.showLogs", handler: () => showMemoBoxLogs() },
+    { command: "memobox.showAiLogs", handler: () => showMemoBoxAiLogs() },
+    { command: "memobox.openAdmin", handler: async () => await openAdmin(context) },
+    { command: "memobox.openSetup", handler: async () => await openSetup(context) },
+    { command: "memobox.openCustomPage", handler: async () => await openCustomPagePicker(context) },
+    { command: "memobox.aiAutoTag", handler: async () => await autoTagMemoCommand() },
+    { command: "memobox.aiSummarize", handler: async () => await summarizeMemoCommand() },
+    { command: "memobox.aiGenerateTitle", handler: async () => await generateAiTitleCommand() },
+    { command: "memobox.aiProofread", handler: async () => await proofreadMemoCommand() },
+    { command: "memobox.aiTranslate", handler: async () => await translateMemoCommand() },
+    { command: "memobox.aiQuestion", handler: async () => await askMemoQuestionCommand() },
+    { command: "memobox.aiSuggestTemplate", handler: async () => await suggestTemplateCommand() },
+    { command: "memobox.aiReport", handler: async () => await reportMemoCommand() },
+    { command: "memobox.aiLinkSuggest", handler: async () => await linkSuggestCommand() },
+    { command: "memobox.aiSetApiKey", handler: async () => await setAiApiKeyCommand() },
+    { command: "memobox.aiClearApiKey", handler: async () => await clearAiApiKeyCommand() },
+    { command: "extension.memoNew", handler: async () => await newMemo() },
+    { command: "extension.memoQuick", handler: async () => await quickMemo() },
+    { command: "extension.memoEdit", handler: async () => await listMemos() },
+    { command: "extension.memoGrep", handler: async () => await grepMemosCommand() },
+    { command: "extension.memoConfig", handler: async () => await openSettingsCommand() },
+    { command: "extension.memoReDate", handler: async () => await redateMemoCommand() },
+    { command: "extension.memoTodo", handler: async () => await todoMemosCommand() },
+    { command: "extension.memoRelated", handler: async () => await relatedMemosCommand() },
+    { command: "extension.memoInsertLink", handler: async () => await insertMemoLinkCommand() },
+    { command: "extension.memoBacklinks", handler: async () => await showBacklinksCommand() },
+    { command: "extension.memoOpenOrCreateWikiMemo", handler: async () => await openOrCreateWikiMemoCommand() },
+    { command: "extension.memoAlignSelectedCsv", handler: async () => await alignSelectedCsvCommand() },
+    { command: "extension.memoFormatMarkdownTable", handler: async () => await formatMarkdownTableCommand() },
+    { command: "extension.memoInsertFootnote", handler: async () => await insertFootnoteCommand() },
+    { command: "extension.memoOpenFolder", handler: async () => await openMemoFolderCommand() },
+    { command: "extension.memoOpenChrome", handler: async () => await openMarkdownInBrowserCommand() },
+    { command: "extension.memoAdmin", handler: async () => await openAdmin(context) },
+    { command: "extension.memoAutoTag", handler: async () => await autoTagMemoCommand() },
+    { command: "extension.memoSummarize", handler: async () => await summarizeMemoCommand() },
+    { command: "extension.memoGenerateTitle", handler: async () => await generateAiTitleCommand() },
+    { command: "extension.memoProofread", handler: async () => await proofreadMemoCommand() },
+    { command: "extension.memoTranslate", handler: async () => await translateMemoCommand() },
+    { command: "extension.memoQA", handler: async () => await askMemoQuestionCommand() },
+    { command: "extension.memoSuggestTemplate", handler: async () => await suggestTemplateCommand() },
+    { command: "extension.memoReport", handler: async () => await reportMemoCommand() },
+    { command: "extension.memoLinkSuggest", handler: async () => await linkSuggestCommand() },
+    { command: "extension.memoSetAiApiKey", handler: async () => await setAiApiKeyCommand() },
+    { command: "extension.memoClearAiApiKey", handler: async () => await clearAiApiKeyCommand() }
+  ];
+
   context.subscriptions.push(
-    vscode.commands.registerCommand("memobox.newMemo", async () => {
-      await newMemo();
-    }),
-    vscode.commands.registerCommand("memobox.quickMemo", async () => {
-      await quickMemo();
-    }),
-    vscode.commands.registerCommand("memobox.listMemos", async () => {
-      await listMemos();
-    }),
-    vscode.commands.registerCommand("memobox.listTags", async () => {
-      await listTagsCommand();
-    }),
-    vscode.commands.registerCommand("memobox.insertMemoLink", async () => {
-      await insertMemoLinkCommand();
-    }),
-    vscode.commands.registerCommand("memobox.showBacklinks", async () => {
-      await showBacklinksCommand();
-    }),
-    vscode.commands.registerCommand("memobox.openOrCreateWikiMemo", async () => {
-      await openOrCreateWikiMemoCommand();
-    }),
-    vscode.commands.registerCommand("memobox.alignSelectedCsv", async () => {
-      await alignSelectedCsvCommand();
-    }),
-    vscode.commands.registerCommand("memobox.formatMarkdownTable", async () => {
-      await formatMarkdownTableCommand();
-    }),
-    vscode.commands.registerCommand("memobox.insertFootnote", async () => {
-      await insertFootnoteCommand();
-    }),
-    vscode.commands.registerCommand("memobox.createWorkspace", async () => {
-      await createWorkspaceCommand();
-    }),
-    vscode.commands.registerCommand("memobox.grepMemos", async () => {
-      await grepMemosCommand();
-    }),
-    vscode.commands.registerCommand("memobox.todoMemos", async () => {
-      await todoMemosCommand();
-    }),
-    vscode.commands.registerCommand("memobox.relatedMemos", async () => {
-      await relatedMemosCommand();
-    }),
-    vscode.commands.registerCommand("memobox.redateMemo", async () => {
-      await redateMemoCommand();
-    }),
-    vscode.commands.registerCommand("memobox.refreshIndex", async () => {
-      await refreshIndexCommand();
-    }),
-    vscode.commands.registerCommand("memobox.rebuildIndex", async () => {
-      await rebuildIndexCommand();
-    }),
-    vscode.commands.registerCommand("memobox.clearIndexCache", async () => {
-      await clearIndexCacheCommand();
-    }),
-    vscode.commands.registerCommand("memobox.openMemoFolder", async () => {
-      await openMemoFolderCommand();
-    }),
-    vscode.commands.registerCommand("memobox.openMarkdownInBrowser", async () => {
-      await openMarkdownInBrowserCommand();
-    }),
-    vscode.commands.registerCommand("memobox.openCommandLauncher", async () => {
-      await openCommandLauncherCommand();
-    }),
-    vscode.commands.registerCommand("memobox.openSettings", async () => {
-      await openSettingsCommand();
-    }),
-    vscode.commands.registerCommand("memobox.showLogs", async () => {
-      showMemoBoxLogs();
-    }),
-    vscode.commands.registerCommand("memobox.showAiLogs", async () => {
-      showMemoBoxAiLogs();
-    }),
-    vscode.commands.registerCommand("memobox.openAdmin", () => {
-      void openAdmin(context);
-    }),
-    vscode.commands.registerCommand("memobox.openSetup", () => {
-      void openSetup(context);
-    }),
-    vscode.commands.registerCommand("memobox.openCustomPage", async () => {
-      await openCustomPagePicker(context);
-    }),
-    vscode.commands.registerCommand("memobox.aiAutoTag", async () => {
-      await autoTagMemoCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiSummarize", async () => {
-      await summarizeMemoCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiGenerateTitle", async () => {
-      await generateAiTitleCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiProofread", async () => {
-      await proofreadMemoCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiTranslate", async () => {
-      await translateMemoCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiQuestion", async () => {
-      await askMemoQuestionCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiSuggestTemplate", async () => {
-      await suggestTemplateCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiReport", async () => {
-      await reportMemoCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiLinkSuggest", async () => {
-      await linkSuggestCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiSetApiKey", async () => {
-      await setAiApiKeyCommand();
-    }),
-    vscode.commands.registerCommand("memobox.aiClearApiKey", async () => {
-      await clearAiApiKeyCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoNew", async () => {
-      await newMemo();
-    }),
-    vscode.commands.registerCommand("extension.memoQuick", async () => {
-      await quickMemo();
-    }),
-    vscode.commands.registerCommand("extension.memoEdit", async () => {
-      await listMemos();
-    }),
-    vscode.commands.registerCommand("extension.memoGrep", async () => {
-      await grepMemosCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoConfig", async () => {
-      await openSettingsCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoReDate", async () => {
-      await redateMemoCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoTodo", async () => {
-      await todoMemosCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoRelated", async () => {
-      await relatedMemosCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoInsertLink", async () => {
-      await insertMemoLinkCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoBacklinks", async () => {
-      await showBacklinksCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoOpenOrCreateWikiMemo", async () => {
-      await openOrCreateWikiMemoCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoAlignSelectedCsv", async () => {
-      await alignSelectedCsvCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoFormatMarkdownTable", async () => {
-      await formatMarkdownTableCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoInsertFootnote", async () => {
-      await insertFootnoteCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoOpenFolder", async () => {
-      await openMemoFolderCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoOpenChrome", async () => {
-      await openMarkdownInBrowserCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoAdmin", () => {
-      void openAdmin(context);
-    }),
-    vscode.commands.registerCommand("extension.memoAutoTag", async () => {
-      await autoTagMemoCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoSummarize", async () => {
-      await summarizeMemoCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoGenerateTitle", async () => {
-      await generateAiTitleCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoProofread", async () => {
-      await proofreadMemoCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoTranslate", async () => {
-      await translateMemoCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoQA", async () => {
-      await askMemoQuestionCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoSuggestTemplate", async () => {
-      await suggestTemplateCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoReport", async () => {
-      await reportMemoCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoLinkSuggest", async () => {
-      await linkSuggestCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoSetAiApiKey", async () => {
-      await setAiApiKeyCommand();
-    }),
-    vscode.commands.registerCommand("extension.memoClearAiApiKey", async () => {
-      await clearAiApiKeyCommand();
-    })
+    ...registrations.map(({ command, handler }) => registerMemoBoxCommand(command, handler))
   );
+}
+
+function registerMemoBoxCommand(command: string, handler: CommandHandler): vscode.Disposable {
+  return vscode.commands.registerCommand(command, async (...args: unknown[]) => {
+    try {
+      await handler(...args);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logMemoBoxError("command", `Command failed: ${command}`, { message });
+      await vscode.window.showErrorMessage(formatCommandErrorMessage(command, message));
+    }
+  });
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message.trim();
+  }
+
+  return String(error).trim();
+}
+
+function formatCommandErrorMessage(command: string, message: string): string {
+  const detail = message === "" ? "" : ` ${message}`;
+  return `MemoBox: Command failed (${command}).${detail}`;
 }

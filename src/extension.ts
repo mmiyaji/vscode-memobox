@@ -120,7 +120,7 @@ export function activate(context: vscode.ExtensionContext): void {
   void isReadyMemoRoot(settings.memodir).then((ready) => {
     if (!ready) {
       setTimeout(() => {
-        openSetup(context);
+        void openSetup(context);
       }, 500);
       return;
     }
@@ -130,7 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
 
     setTimeout(() => {
-      openAdmin(context);
+      void openAdmin(context);
     }, 400);
   }).catch((error: unknown) => {
     logMemoBoxInfo("extension", "Failed to check memo root readiness.", {

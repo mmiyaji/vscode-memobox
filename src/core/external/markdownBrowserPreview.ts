@@ -2,12 +2,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join, posix, win32 } from "node:path";
 import MarkdownIt from "markdown-it";
+import { escapeHtml } from "../../shared/webviewSecurity";
 
 const previewDirectoryName = "memobox";
 const markdownExtensions = new Set([".md", ".markdown", ".mdown", ".mkd"]);
 
 const markdownRenderer = new MarkdownIt({
-  html: true,
+  html: false,
   linkify: true
 });
 
@@ -254,15 +255,6 @@ function getSourceDirectoryHref(uri: UriLike): string {
 
   fileUrl.pathname = normalizedDirectoryPath.startsWith("/") ? normalizedDirectoryPath : `/${normalizedDirectoryPath}`;
   return fileUrl.toString();
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function getPathModule(filePath: string): typeof win32 | typeof posix {

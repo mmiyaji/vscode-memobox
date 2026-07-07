@@ -8,6 +8,7 @@ import { readSettings } from "../../core/config/settings";
 import { getExtensionDisplayVersion } from "../../shared/extensionInfo";
 import { getMemoBoxConfigurationTarget } from "../../shared/configTarget";
 import { getMemoBoxUiText, resolveUiLanguage } from "../../shared/uiText";
+import { createCspNonce } from "../../shared/webviewSecurity";
 import { refreshIndexCommand } from "../commands/refreshIndexCommand";
 import { listTagsCommand } from "../commands/listTagsCommand";
 import { openMemoDocument } from "../commands/openMemoDocument";
@@ -18,6 +19,7 @@ import { renderAdminHtml } from "./adminHtml";
 import { buildAdminDashboardModel } from "./adminViewModel";
 import { completeMemoBoxSetup } from "../welcome/setupFlow";
 import { openCustomPageByPath } from "../pages/openCustomPageCommand";
+import { buildAdminAllowedRoots, isAllowedAdminTargetPath } from "./adminSecurity";
 
 const adminViewType = "memobox.admin";
 type AdminMessage =
@@ -32,8 +34,8 @@ type AdminMessage =
   | { readonly type: "unpinFile"; readonly path: string }
   | { readonly type: "openCustomPage"; readonly path: string };
 
-export function openAdmin(context: vscode.ExtensionContext): void {
-  void MemoAdminPanel.show(context);
+export async function openAdmin(context: vscode.ExtensionContext): Promise<void> {
+  await MemoAdminPanel.show(context);
 }
 
 class MemoAdminPanel {
@@ -89,7 +91,7 @@ class MemoAdminPanel {
       vscode.workspace.workspaceFolders?.map((folder) => normalize(join(folder.uri.fsPath, meta, "pages"))) ?? [];
     const model = await buildAdminDashboardModel(settings, version, new Date(), workspacePageDirectories);
     this.panel.title = ui.admin.panelTitle(version);
-    this.panel.webview.html = renderAdminHtml(model, getNonce(), ui);
+    this.panel.webview.html = renderAdminHtml(model, createCspNonce(), ui);
   }
 
   private async handleMessage(message: unknown): Promise<void> {
@@ -202,6 +204,10 @@ class MemoAdminPanel {
 
   private async openFile(filePath: string): Promise<void> {
     const settings = readSettings();
+    if (!this.isAllowedTargetPath(filePath)) {
+      await this.showBlockedPathWarning();
+      return;
+    }
 
     try {
       const info = await stat(filePath);
@@ -223,7 +229,8 @@ class MemoAdminPanel {
   }
 
   private async revealPath(filePath: string): Promise<void> {
-    if (filePath.trim() === "") {
+    if (!this.isAllowedTargetPath(filePath)) {
+      await this.showBlockedPathWarning();
       return;
     }
 
@@ -237,6 +244,11 @@ class MemoAdminPanel {
   }
 
   private async setDefaultTemplate(filePath: string): Promise<void> {
+    if (!this.isAllowedTargetPath(filePath)) {
+      await this.showBlockedPathWarning();
+      return;
+    }
+
     await vscode.workspace.getConfiguration("memobox").update("memotemplate", filePath, getMemoBoxConfigurationTarget());
   }
 
@@ -263,11 +275,23 @@ class MemoAdminPanel {
 
   private async pinFile(filePath: string): Promise<void> {
     const settings = readSettings();
+    const memoRoot = settings.memodir.trim();
+    if (memoRoot === "" || !isAllowedAdminTargetPath(filePath, [memoRoot])) {
+      await this.showBlockedPathWarning();
+      return;
+    }
+
     await pinMemoByAbsolutePath(settings, filePath);
   }
 
   private async unpinFile(filePath: string): Promise<void> {
     const settings = readSettings();
+    const memoRoot = settings.memodir.trim();
+    if (memoRoot === "" || !isAllowedAdminTargetPath(filePath, [memoRoot])) {
+      await this.showBlockedPathWarning();
+      return;
+    }
+
     await unpinMemoByAbsolutePath(settings, filePath);
   }
 
@@ -280,6 +304,17 @@ class MemoAdminPanel {
     }
 
     await ensureMemoMetaDirectories(settings);
+  }
+
+  private isAllowedTargetPath(filePath: string): boolean {
+    const settings = readSettings();
+    return isAllowedAdminTargetPath(filePath, buildAdminAllowedRoots(settings));
+  }
+
+  private async showBlockedPathWarning(): Promise<void> {
+    const settings = readSettings();
+    const ui = getMemoBoxUiText(resolveUiLanguage(settings.locale));
+    await vscode.window.showWarningMessage(ui.pages.blockedPath);
   }
 }
 
@@ -318,8 +353,4 @@ function isAdminMessage(value: unknown): value is AdminMessage {
   }
 
   return false;
-}
-
-function getNonce(): string {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 }
