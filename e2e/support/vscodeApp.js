@@ -122,12 +122,20 @@ async function waitForWebviewFrame(window, testId, timeoutMs = 30_000) {
     const outerFrames = await window.locator("iframe").elementHandles();
 
     for (const outerFrameHandle of outerFrames) {
+      if (!(await outerFrameHandle.isVisible().catch(() => false))) {
+        continue;
+      }
+
       const outerFrame = await outerFrameHandle.contentFrame();
       if (!outerFrame) {
         continue;
       }
 
       const innerFrameHandle = await outerFrame.locator("#active-frame").elementHandle();
+      if (innerFrameHandle && !(await innerFrameHandle.isVisible().catch(() => false))) {
+        continue;
+      }
+
       const innerFrame = innerFrameHandle ? await innerFrameHandle.contentFrame() : undefined;
       if (!innerFrame) {
         continue;
@@ -177,8 +185,11 @@ async function openCommandPalette(window) {
 }
 
 async function runCommand(window, commandTitle) {
-  const input = await openCommandPalette(window);
-  await input.fill(commandTitle);
+  await focusWorkbench(window);
+  await window.keyboard.press("Control+P");
+  const input = window.locator(".quick-input-widget input").last();
+  await input.waitFor({ state: "visible", timeout: 30_000 });
+  await input.fill(`>${commandTitle}`);
   await window.waitForTimeout(400);
   await input.press("Enter");
 }

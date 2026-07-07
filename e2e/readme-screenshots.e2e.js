@@ -1,6 +1,7 @@
 const { mkdir } = require("node:fs/promises");
 const { join, resolve } = require("node:path");
 const { test, expect } = require("@playwright/test");
+const { version } = require("../package.json");
 const { launchMemoBoxAdminForE2E, runCommand, waitForAdminFrame, waitForSetupFrame } = require("./support/vscodeApp");
 
 const screenshotOutputDir = resolve(__dirname, "..", "docs", "screenshots");
@@ -92,7 +93,7 @@ test.describe("README screenshot capture", () => {
       await app.window.keyboard.press("Control+Alt+Shift+M");
 
       const adminFrame = await waitForAdminFrame(app.window);
-      await expect(adminFrame.locator("[data-testid='admin-title']")).toHaveText("Memo Overview");
+      await expect(adminFrame.locator("[data-testid='admin-title']")).toHaveText(`MemoBox v${version}`);
       await adminFrame.locator("[data-testid='pin-file-button']").first().click();
       await app.window.waitForTimeout(500);
 

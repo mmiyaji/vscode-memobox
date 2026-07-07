@@ -1,6 +1,7 @@
 const { access, readFile, readdir, writeFile } = require("node:fs/promises");
 const { join } = require("node:path");
 const { test, expect } = require("@playwright/test");
+const { version } = require("../package.json");
 const {
   acceptQuickPick,
   fillQuickInput,
@@ -21,7 +22,7 @@ test("Admin renders memo state and supports pin/unpin from recent files", async 
   try {
     const adminFrame = await waitForAdminFrame(app.window);
 
-    await expect(adminFrame.locator("[data-testid='admin-title']")).toHaveText("Memo Overview");
+    await expect(adminFrame.locator("[data-testid='admin-title']")).toHaveText(`MemoBox v${version}`);
     await expect(adminFrame.locator("[data-testid='indexed-files-value']")).toHaveText("2");
     await expect(adminFrame.locator("[data-testid='templates-panel'] [data-testid='template-name']").first()).toHaveText(
       "simple.md"
@@ -248,7 +249,7 @@ test("Grep and Todo commands surface searchable results through quick pick", asy
     await expect(grepWidget).toContainText("2026-03-22-review.md");
 
     await app.window.keyboard.press("Enter");
-    await app.window.keyboard.press("Control+Alt+Shift+M");
+    await runCommand(app.window, "MemoBox Admin: Open Admin");
 
     const refreshedAdminFrame = await waitForAdminFrame(app.window);
     const todoButton = refreshedAdminFrame.locator("[data-command='memobox.todoMemos']");
